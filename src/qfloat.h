@@ -77,25 +77,23 @@ void sprint_f64_libc(qfloat_f64 value, char buffer[QFLOAT_SIZE_f64]) {
 }
 #endif
 
-// "augmented arithmetic operations"
-#if !QFLOAT_HAS_CRT
-/*inline __attribute__((always_inline)) f64 fma(f64 a, f64 b, f64 c) {
-  #if !(__x86_64__ || __i386__)
+// IEEE "augmented arithmetic operations"
+inline __attribute__((always_inline)) qfloat_f64 qfloat_fma(qfloat_f64 a, qfloat_f64 b, qfloat_f64 c) {
+#if !(__x86_64__ || __i386__)
   _Static_assert(false, "Not implemented");
-  #endif
-  f64 result = a;
+#endif
+  qfloat_f64 result = a;
   asm volatile("vfmadd213sd %0, %1, %2" : "+x"(result) : "x"(b), "x"(c));
   return result;
-}*/
-#endif
+}
 void augmented_mul(qfloat_f64 a, qfloat_f64 b, qfloat_f64 *result, qfloat_f64 *error) {
   qfloat_f64 p = a * b;
-  *error = fma(a, b, -p); /* NOTE: fma() has infinite precision for `a*b` */
+  *error = qfloat_fma(a, b, -p); /* NOTE: fma() has infinite precision for `a*b` */
   *result = p;
 }
 void augmented_fma(qfloat_f64 x, qfloat_f64 y, qfloat_f64 z, qfloat_f64 *result, qfloat_f64 *error) {
-  qfloat_f64 p = fma(x, y, z);
-  *error = fma(x, y, z - p);
+  qfloat_f64 p = qfloat_fma(x, y, z);
+  *error = qfloat_fma(x, y, z - p);
   *result = p;
 }
 void augmented_add(qfloat_f64 a, qfloat_f64 b, qfloat_f64 *result, qfloat_f64 *error) {

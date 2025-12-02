@@ -1,0 +1,11 @@
+*.cpp
+*.obj
+*.exe
+*.ilk
+*.pdb
+*.rdi
+*.bin
+*.out
+*-linux*
+
+.vscode/settings.json

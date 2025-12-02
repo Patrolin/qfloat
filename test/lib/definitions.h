@@ -156,7 +156,7 @@ ASSERT(OS_HUGE_PAGE_SIZE == 2 * MebiByte);
 /* private to file */
 #define private static
 #define forward_declare
-#define always_inline inline __attribute__((always_inline))
+#define always_inline_ inline __attribute__((always_inline))
 #define never_inline __attribute__((noinline))
 #define foreign __declspec(dllimport)
 // #define stdcall __attribute__((__stdcall__))
@@ -186,7 +186,7 @@ forward_declare Noreturn abort();
 #define offsetof(T, key) CONCAT(&(T*)(0)., key)
 #define alignof(x) __alignof__(x)
 #define countof(x) (intptr(sizeof(x)) / intptr(sizeof(x[0])))
-always_inline void zero(byte* ptr, Size size) {
+always_inline_ void zero(byte* ptr, Size size) {
   for (intptr i = 0; i < size; i++) {
     ptr[size] = 0;
   }
