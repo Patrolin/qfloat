@@ -12,7 +12,7 @@ int main() {
 }
 ```
 
-## Problem statement
+## Motivation
 We want to convert a float into the shortest necessary string representation, meaning:
 1) We are able to convert the string back into the original float.
 2) It is the shortest string representation of that float.
@@ -52,8 +52,26 @@ There exist [algorithms](https://github.com/abolz/Drachennest) to find the short
 Instead of trying to find the shortest representation from scratch, why not start with the [shortest sufficient representation](https://www.exploringbinary.com/number-of-digits-required-for-round-trip-conversions) (which is guaranteed to make our first condition true), and then shorten it until we get the shortest necessary representation:
 ```c
 string sx = sprint_f64(x);  // "0.29999999999999999"
-shorten_f64(sx);            // "0.3"
+shorten_f64_string(sx);     // "0.3"
 
 string sy = sprint_f64(y);  // "0.30000000000000004"
-shorten_f64(sy);            // "0.30000000000000004"
+shorten_f64_string(sy);     // "0.30000000000000004"
+```
+
+We define a new operation `truncate_significand_upwards()`, which truncates the significand by one digit and then adds one to the last digit (with carry):
+```c
+truncate_significand_upwards("0.29999999999999999e16") -> "0.3000000000000000e16"
+```
+Then we can implement `shorten_f64_string()` as:
+```c
+string shorten_f64_string(string s) {
+  // ...Ignore leading `'+'`, `'-'`
+  // ...Ignore `"nan"`, `"inf"`, `"infinity"`
+  while truncate_significand_upwards_is_valid_operation(s) {
+    s = truncate_significand_upwards(s)
+  }
+  while truncate_significand_is_valid_operation(s) {
+    s = truncate_significand(s)
+  }
+}
 ```

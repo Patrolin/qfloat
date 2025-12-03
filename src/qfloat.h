@@ -36,7 +36,7 @@ qfloat_intptr qfloat_shorten_f64_string(qfloat_f64 value, char buffer[QFLOAT_SIZ
   while (exponent_index < size && buffer[exponent_index] != 'e') {
     exponent_index++;
   }
-  // round up and trucate
+  // truncate significand upwards
   char shortened[QFLOAT_SIZE_f64];
   memcpy(shortened, buffer, (qfloat_uintptr)size);
   while (exponent_index > 1) {
@@ -58,7 +58,7 @@ qfloat_intptr qfloat_shorten_f64_string(qfloat_f64 value, char buffer[QFLOAT_SIZ
     exponent_index--;
     size--;
   }
-  // truncate
+  // truncate significand
   qfloat_intptr significand_end = exponent_index;
   qfloat_intptr exponent_end = (qfloat_intptr)size;
   memcpy(shortened, buffer, (qfloat_uintptr)exponent_index);
