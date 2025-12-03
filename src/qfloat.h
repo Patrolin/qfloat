@@ -18,12 +18,14 @@ _Static_assert(sizeof(qfloat_f64) == 8, "qfloat_f64");
     Math.ceil(EXPLICIT_MANTISSA_BITS_f64 * Math.log10(2)) + 1 = 17 */
 /* NOTE: sign(1) + digits(17) + decimal_point(1) + signed_exponent(5) + null_terminator(1) */
 #define QFLOAT_SIZE_f64 ((qfloat_uintptr)(1) + 17 + 1 + 5 + 1)
+typedef qfloat_f64 qfloat_str_to_f64(char *buffer, qfloat_uintptr size);
+
 #if QFLOAT_HAS_CRT
   #include <math.h>
   #include <stdio.h>
   #include <stdlib.h>
   #include <string.h>
-void shorten_f64_string_libc(qfloat_f64 value, char buffer[QFLOAT_SIZE_f64], qfloat_uintptr size) {
+void shorten_f64_string(qfloat_f64 value, char buffer[QFLOAT_SIZE_f64], qfloat_uintptr size, qfloat_str_to_f64 str_to_float) {
   qfloat_assert(size < QFLOAT_SIZE_f64);
   // preserve "+-inf", "nan"
   if (size == 0) return;
@@ -51,7 +53,7 @@ void shorten_f64_string_libc(qfloat_f64 value, char buffer[QFLOAT_SIZE_f64], qfl
     memcpy(shortened + exponent_index - 1, buffer + exponent_index, size - (qfloat_uintptr)exponent_index);
     shortened[size - 1] = '\0';
     // if valid transform, copy to original
-    if (strtod(shortened, 0) != value) break;
+    if (str_to_float(shortened, size - 1) != value) break;
     memcpy(buffer, shortened, size);
     exponent_index--;
     size--;
@@ -64,16 +66,19 @@ void shorten_f64_string_libc(qfloat_f64 value, char buffer[QFLOAT_SIZE_f64], qfl
     memcpy(shortened + significand_end - 1, buffer + exponent_index, size - (qfloat_uintptr)exponent_index);
     shortened[exponent_end - 1] = '\0';
     // if valid transform, update significand_end
-    if (strtod(shortened, 0) != value) break;
+    if (str_to_float(shortened, (qfloat_uintptr)exponent_end - 1) != value) break;
     significand_end--;
     exponent_end--;
   }
   memcpy(buffer + significand_end, buffer + exponent_index, size - (qfloat_uintptr)exponent_index);
   buffer[exponent_end] = '\0';
 }
+qfloat_f64 str_to_f64_libc(char *buffer, qfloat_uintptr size) {
+  return strtod(buffer, 0);
+}
 void sprint_f64_libc(qfloat_f64 value, char buffer[QFLOAT_SIZE_f64]) {
   int size = snprintf(buffer, QFLOAT_SIZE_f64, "%.17g", value);
-  shorten_f64_string_libc(value, buffer, (qfloat_uintptr)size);
+  shorten_f64_string(value, buffer, (qfloat_uintptr)size, str_to_f64_libc);
 }
 #endif
 
