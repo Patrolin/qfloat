@@ -8,6 +8,7 @@
 #define sprint_size2(t1, v1, t2, v2) (CONCAT(sprint_size_, t1)(v1) + CONCAT(sprint_size_, t2)(v2))
 #define sprint_size3(t1, v1, t2, v2, t3, v3) (CONCAT(sprint_size_, t1)(v1) + CONCAT(sprint_size_, t2)(v2) + CONCAT(sprint_size_, t3)(v3))
 #define sprint_size4(t1, v1, t2, v2, t3, v3, t4, v4) (CONCAT(sprint_size_, t1)(v1) + CONCAT(sprint_size_, t2)(v2) + CONCAT(sprint_size_, t3)(v3) + CONCAT(sprint_size_, t4)(v4))
+#define sprint_size5(t1, v1, t2, v2, t3, v3, t4, v4, t5, v5) (CONCAT(sprint_size_, t1)(v1) + CONCAT(sprint_size_, t2)(v2) + CONCAT(sprint_size_, t3)(v3) + CONCAT(sprint_size_, t4)(v4) + CONCAT(sprint_size_, t5)(v5))
 #define STACK_BUFFER(buffer, max_size, ptr_end) \
   byte buffer[max_size];                        \
   byte* ptr_end = &buffer[max_size]
@@ -246,6 +247,58 @@ Size sprint_intptr(intptr value, byte* buffer_end) {
   }                                                                            \
   VAR(size, C);                                                                \
 })
+#define sprintf4(ptr_end, format, t1, v1, t2, v2, t3, v3, t4, v4) sprintf4_impl(__COUNTER__, ptr_end, format, t1, v1, t2, v2, t3, v3, t4, v4)
+#define sprintf4_impl(C, ptr_end, format, t1, v1, t2, v2, t3, v3, t4, v4) ({   \
+  string VAR(fmt, C) = format;                                                 \
+  Size VAR(size, C) = 0;                                                       \
+  intptr VAR(i, C) = intptr(VAR(fmt, C).size);                                 \
+  intptr VAR(j, C) = VAR(i, C);                                                \
+  while (VAR(i, C) > 0) {                                                      \
+    (VAR(i, C)--);                                                             \
+    if (expect_unlikely(VAR(fmt, C).ptr[VAR(i, C)] == '%')) {                  \
+      string VAR(after, C) = str_slice(VAR(fmt, C), VAR(i, C) + 1, VAR(j, C)); \
+      VAR(size, C) += sprint(string, VAR(after, C), ptr_end);                  \
+      VAR(j, C) = VAR(i, C);                                                   \
+      VAR(size, C) += sprint(t4, v4, ptr_end - VAR(size, C));                  \
+      break;                                                                   \
+    }                                                                          \
+  }                                                                            \
+  while (VAR(i, C) > 0) {                                                      \
+    (VAR(i, C)--);                                                             \
+    if (expect_unlikely(VAR(fmt, C).ptr[VAR(i, C)] == '%')) {                  \
+      string VAR(after, C) = str_slice(VAR(fmt, C), VAR(i, C) + 1, VAR(j, C)); \
+      VAR(size, C) += sprint(string, VAR(after, C), ptr_end - VAR(size, C));   \
+      VAR(j, C) = VAR(i, C);                                                   \
+      VAR(size, C) += sprint(t3, v3, ptr_end - VAR(size, C));                  \
+      break;                                                                   \
+    }                                                                          \
+  }                                                                            \
+  while (VAR(i, C) > 0) {                                                      \
+    (VAR(i, C)--);                                                             \
+    if (expect_unlikely(VAR(fmt, C).ptr[VAR(i, C)] == '%')) {                  \
+      string VAR(after, C) = str_slice(VAR(fmt, C), VAR(i, C) + 1, VAR(j, C)); \
+      VAR(size, C) += sprint(string, VAR(after, C), ptr_end - VAR(size, C));   \
+      VAR(j, C) = VAR(i, C);                                                   \
+      VAR(size, C) += sprint(t2, v2, ptr_end - VAR(size, C));                  \
+      break;                                                                   \
+    }                                                                          \
+  }                                                                            \
+  while (VAR(i, C) > 0) {                                                      \
+    (VAR(i, C)--);                                                             \
+    if (expect_unlikely(VAR(fmt, C).ptr[VAR(i, C)] == '%')) {                  \
+      string VAR(after, C) = str_slice(VAR(fmt, C), VAR(i, C) + 1, VAR(j, C)); \
+      VAR(size, C) += sprint(string, VAR(after, C), ptr_end - VAR(size, C));   \
+      VAR(j, C) = VAR(i, C);                                                   \
+      VAR(size, C) += sprint(t1, v1, ptr_end - VAR(size, C));                  \
+      break;                                                                   \
+    }                                                                          \
+  }                                                                            \
+  if (expect_small(VAR(j, C) > 0)) {                                           \
+    string VAR(before, C) = str_slice(VAR(fmt, C), 0, VAR(j, C));              \
+    VAR(size, C) += sprint(string, VAR(before, C), ptr_end - VAR(size, C));    \
+  }                                                                            \
+  VAR(size, C);                                                                \
+})
 
 // fprint()
 void fprint(FileHandle file, string str) {
@@ -357,4 +410,14 @@ void print_string(string str) {
   Size VAR(size, C) = sprintf3(VAR(ptr_end, C) - 1, format, t1, v1, t2, v2, t3, v3) + 1; \
   string VAR(msg, C) = sprint_to_string(VAR(ptr_end, C), VAR(size, C));                  \
   print_string(VAR(msg, C));                                                             \
+})
+#define printfln4(format, t1, v1, t2, v2, t3, v3, t4, v4) printfln4_impl(__COUNTER__, format, t1, v1, t2, v2, t3, v3, t4, v4)
+#define printfln4_impl(C, format, t1, v1, t2, v2, t3, v3, t4, v4) ({                             \
+  Size VAR(max_size, C) = sprint_size5(string, format, t1, v1, t2, v2, t3, v3, t4, v4) + 1;      \
+  STACK_BUFFER(VAR(buffer, C), VAR(max_size, C), VAR(ptr_end, C));                               \
+                                                                                                 \
+  *(VAR(ptr_end, C) - 1) = '\n';                                                                 \
+  Size VAR(size, C) = sprintf4(VAR(ptr_end, C) - 1, format, t1, v1, t2, v2, t3, v3, t4, v4) + 1; \
+  string VAR(msg, C) = sprint_to_string(VAR(ptr_end, C), VAR(size, C));                          \
+  print_string(VAR(msg, C));                                                                     \
 })

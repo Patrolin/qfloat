@@ -22,13 +22,16 @@ void main_multicore(Thread t) {
     bool ok = true;
     f64 value_f64 = bitcast(value, u64, f64);
     // test qfloat_sprint_f64_libc()
+    byte debug_buffer[QFLOAT_SIZE_f64];
     byte buffer[QFLOAT_SIZE_f64];
     intptr size = qfloat_sprint_f64_libc(value_f64, buffer);
     f64 new_value = qfloat_str_to_f64_libc(buffer, size);
     ok &= new_value == value_f64 || isnan(value_f64);
     if (expect_small(!ok)) {
-      printf("\n%.17g\n%s\n", value_f64, buffer);
-      printfln2(string("% -> %"), uhex, value, uhex, bitcast(new_value, f64, u64));
+      int debug_size = sprintf(debug_buffer, "%.17g", value_f64);
+      string s1 = (string){debug_buffer, Size(debug_size)};
+      string s2 = (string){buffer, Size(size)};
+      printfln4(string("\n% -> %  // libc\n% -> %  // libc shortened"), string, s1, uhex, value, string, s2, uhex, bitcast(new_value, f64, u64));
       assert(false);
     }
     // test sprint_f64()
@@ -37,9 +40,10 @@ void main_multicore(Thread t) {
     new_value = str_to_f64(buffer, size);
     ok &= new_value == value_f64 || isnan(value_f64);
     if (expect_small(!ok)) {
-      string s = (string){buffer, Size(size)};
-      printf("\n%.17g\n", value_f64);
-      printfln3(string("% -> % -> % (str_to_f64)"), uhex, value, string, s, uhex, bitcast(new_value, f64, u64));
+      int libc_size = sprintf(debug_buffer, "%.17g", value_f64);
+      string s1 = (string){debug_buffer, Size(libc_size)};
+      string s2 = (string){buffer, Size(size)};
+      printfln4(string("\n% -> %  // libc\n% -> %  // nolibc shortened"), string, s1, uhex, value, string, s2, uhex, bitcast(new_value, f64, u64));
       assert(false);
     }
     test(ok, current_run, value, succeeded_ptr);
