@@ -78,6 +78,8 @@ void sprint_f64_libc(qfloat_f64 value, char buffer[QFLOAT_SIZE_f64]) {
 #endif
 
 // IEEE "augmented arithmetic operations"
+/* NOTE: pragma to disable float optimizations for these functions */
+#pragma STDC FENV_ACCESS ON
 inline __attribute__((always_inline)) qfloat_f64 qfloat_fma(qfloat_f64 a, qfloat_f64 b, qfloat_f64 c) {
 #if !(__x86_64__ || __i386__)
   _Static_assert(false, "Not implemented");
@@ -114,3 +116,6 @@ void augmented_add_fast(qfloat_f64 a, qfloat_f64 b, qfloat_f64 *result, qfloat_f
   *error = b - (s - a);
   *result = s;
 }
+
+// TODO: format and parse floats without libc
+#pragma STDC FENV_ACCESS OFF
