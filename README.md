@@ -57,5 +57,3 @@ shorten_f64(sx);            // "0.3"
 string sy = sprint_f64(y);  // "0.30000000000000004"
 shorten_f64(sy);            // "0.30000000000000004"
 ```
-
-TODO: we also provide `sprint_f64()`
