@@ -118,4 +118,4 @@ void augmented_add_fast(qfloat_f64 a, qfloat_f64 b, qfloat_f64 *result, qfloat_f
 }
 
 // TODO: format and parse floats without libc
-#pragma STDC FENV_ACCESS OFF
+#pragma STDC FENV_ACCESS DEFAULT

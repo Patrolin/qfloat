@@ -1,3 +1,18 @@
+## Usage
+```
+#include "qfloat.h"
+
+int main() {
+  char buffer[QFLOAT_SIZE_f64];
+  sprint_f64_libc(0.3, buffer);
+  printf("%s", buffer);  // 0.3
+
+  sprint_f64(0.2 + 0.1, buffer);
+  printf("%s", buffer);  // 0.30000000000000004
+}
+```
+NOTE: `qfloat.h` overwrites the value of `#pragma STDC FENV_ACCESS` to `DEFAULT`, so that we can disable float optimizations locally across different compilers.
+
 ## Problem statement
 We want to convert a float into the shortest necessary string representation, meaning:
 1) We are able to convert the string back into the original float.
