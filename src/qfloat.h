@@ -20,11 +20,12 @@ _Static_assert(sizeof(qfloat_f64) == 8, "qfloat_f64");
 #define QFLOAT_SIZE_f64 ((qfloat_uintptr)(1) + 17 + 1 + 5 + 1)
 typedef qfloat_f64 qfloat_str_to_f64(char *buffer, qfloat_intptr size);
 
-#if QFLOAT_HAS_CRT
+#if !QFLOAT_NOLIBC
   #include <math.h>
   #include <stdio.h>
   #include <stdlib.h>
   #include <string.h>
+#endif
 qfloat_intptr qfloat_shorten_f64_string(qfloat_f64 value, char buffer[QFLOAT_SIZE_f64], qfloat_intptr size, qfloat_str_to_f64 str_to_float) {
   qfloat_assert(size < QFLOAT_SIZE_f64);
   // preserve "+-inf", "nan"
@@ -74,6 +75,7 @@ qfloat_intptr qfloat_shorten_f64_string(qfloat_f64 value, char buffer[QFLOAT_SIZ
   buffer[exponent_end] = '\0';
   return exponent_end;
 }
+#if !QFLOAT_NOLIBC
 qfloat_f64 qfloat_str_to_f64_libc(char *buffer, qfloat_intptr _size) {
   return strtod(buffer, 0);
 }

@@ -100,31 +100,6 @@ ASSERT(OS_HUGE_PAGE_SIZE == 2 * MebiByte);
   #define ARCH_HAS_NATIVE_F16 0
 #endif
 
-#if HAS_CRT
-  #include <math.h>
-#else
-  #define fma(a, b, c) fma_impl(__COUNTER__, a, b, c)
-#endif
-#if ARCH_X64
-  /* NOTE: windows starts aligned to 8B, while linux starts (correctly) aligned to 16B
-  thus we have to realign ourselves either way... */
-  #define ALIGN_STACK_POINTER() asm volatile("and rsp, -16" ::: "rsp");
-  #define CALL(name) asm volatile("call " #name)
-  #define cpu_relax() asm volatile("pause")
-  #define fma_impl(C, a, b, c) ({         \
-    f64 VAR(fma, C) = a;                  \
-    asm volatile("vfmadd213sd %0, %1, %2" \
-                 : "+x"(VAR(fma, C))      \
-                 : "x"(b), "x"(c));       \
-    VAR(fma, C);                          \
-  })
-  // #include <emmintrin.h>
-  // #include <xmmintrin.h>
-  // #include <immintrin.h>
-  #undef min
-  #undef max
-#endif
-
 // preprocessor helpers
 #define CONCAT0(a, b) a##b
 #define CONCAT(a, b) CONCAT0(a, b)
@@ -182,22 +157,47 @@ forward_declare Noreturn abort();
 #define DISTINCT(type, name) \
   typedef type name
 
-// builtins
-#define offsetof(T, key) CONCAT(&(T*)(0)., key)
-#define alignof(x) __alignof__(x)
-#define countof(x) (intptr(sizeof(x)) / intptr(sizeof(x[0])))
+// crt
 always_inline_ void zero(byte* ptr, Size size) {
   for (intptr i = 0; i < size; i++) {
     ptr[size] = 0;
   }
 }
-#if !HAS_CRT
+#if HAS_CRT
+  #include <math.h>
+#else
 extern void* memset(void* ptr, int x, Size size) {
   assert(x == 0);
   zero(ptr, size);
   return ptr;
 }
+  // TODO: implement memcpy()
+  #define fma_f64(a, b, c) fma_f64_impl(__COUNTER__, a, b, c)
 #endif
+#if ARCH_X64
+  /* NOTE: windows starts aligned to 8B, while linux starts (correctly) aligned to 16B
+  thus we have to realign ourselves either way... */
+  #define ALIGN_STACK_POINTER() asm volatile("and rsp, -16" ::: "rsp");
+  #define CALL(name) asm volatile("call " #name)
+  #define cpu_relax() asm volatile("pause")
+  #define fma_f64_impl(C, a, b, c) ({     \
+    f64 VAR(fma, C) = a;                  \
+    asm volatile("vfmadd213sd %0, %1, %2" \
+                 : "+x"(VAR(fma, C))      \
+                 : "x"(b), "x"(c));       \
+    VAR(fma, C);                          \
+  })
+// #include <emmintrin.h>
+// #include <xmmintrin.h>
+// #include <immintrin.h>
+// #undef min
+// #undef max
+#endif
+
+// builtins
+#define offsetof(T, key) CONCAT(&(T*)(0)., key)
+#define alignof(x) __alignof__(x)
+#define countof(x) (intptr(sizeof(x)) / intptr(sizeof(x[0])))
 #define bitcast(value, t1, t2) bitcast_impl(__COUNTER__, value, t1, t2)
 #define bitcast_impl(C, value, t1, t2) ({ \
   ASSERT(sizeof(t1) == sizeof(t2));       \
