@@ -195,7 +195,7 @@ extern void* memset(void* ptr, int x, Size size) {
 #endif
 
 // builtins
-#define offsetof(T, key) CONCAT(&(T*)(0)., key)
+#define offsetof(t, d) __builtin_offsetof(t, d)
 #define alignof(x) __alignof__(x)
 #define countof(x) (intptr(sizeof(x)) / intptr(sizeof(x[0])))
 #define bitcast(value, t1, t2) bitcast_impl(__COUNTER__, value, t1, t2)

@@ -1,7 +1,7 @@
 // ./run -crt
-#include "lib/all.h"
 #define QFLOAT_NOLIBC !HAS_CRT
 #include "../src/qfloat.h"
+#include "lib/all.h"
 #include <stdio.h>
 
 void main_multicore(Thread t) {
@@ -27,7 +27,6 @@ void main_multicore(Thread t) {
     byte buffer[QFLOAT_SIZE_f64];
     intptr size;
     f64 new_value;
-#if HAS_CRT
     size = qfloat_sprint_f64_libc(value_f64, buffer);
     new_value = qfloat_str_to_f64_libc(buffer, size);
     ok &= new_value == value_f64 || isnan(value_f64);
@@ -38,7 +37,6 @@ void main_multicore(Thread t) {
       printfln4(string("\n% -> %  // libc\n% -> %  // libc shortened"), string, s1, uhex, value, string, s2, uhex, bitcast(new_value, f64, u64));
       assert(false);
     }
-#endif
     // test sprint_f64()
     memset(buffer, 0, QFLOAT_SIZE_f64);
     size = sprint_f64(value_f64, buffer);
