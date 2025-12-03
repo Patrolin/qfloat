@@ -1,5 +1,6 @@
 ## Usage
 ```c
+#define QFLOAT_HAS_CRT 1
 #include "qfloat.h" /* NOTE: overwrites `#pragma STDC FENV_ACCESS` to `DEFAULT`, to disable float optimizations locally */
 
 int main() {
