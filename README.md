@@ -2,7 +2,8 @@
 ```c
 //#define QFLOAT_NOLIBC 1
 //#define qfloat_copy(ptr, size, dest) copy(ptr, size, dest)
-#include "qfloat.h" /* NOTE: overwrites `#pragma STDC FENV_ACCESS` to `DEFAULT`, to disable float optimizations locally */
+/* NOTE: overwrites `#pragma STDC FENV_ACCESS` to `DEFAULT`, to disable float optimizations locally */
+#include "qfloat.h"
 
 int main() {
   char buffer[QFLOAT_SIZE_f64];

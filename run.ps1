@@ -14,8 +14,8 @@ if ($opt) {
 } else {
   $cargs += @("-O0", "-g")
 }
-$input = "test/test_fmt_float.c"
-$output = "test_fmt_float"
+$input = "test/test_qfloat.c"
+$output = "test_qfloat"
 
 rm ($output + ".rdi") -ErrorAction SilentlyContinue;
 rm ($output + ".pdb") -ErrorAction SilentlyContinue;

@@ -10,10 +10,12 @@ typedef intptr_t qfloat_intptr;
 typedef uintptr_t qfloat_uintptr;
 _Static_assert(sizeof(qfloat_f64) == 8, "qfloat_f64");
 
-#ifdef assert
-  #define qfloat_assert(condition) assert(condition)
-#else
-  #define qfloat_assert(condition)
+#ifndef qfloat_assert
+  #ifdef assert
+    #define qfloat_assert(condition) assert(condition)
+  #else
+    #define qfloat_assert(condition)
+  #endif
 #endif
 
 // overflow: https://gcc.gnu.org/onlinedocs/gcc/Integer-Overflow-Builtins.html
@@ -27,6 +29,7 @@ _Static_assert(sizeof(qfloat_f64) == 8, "qfloat_f64");
 #define QFLOAT_SIZE_f64 ((qfloat_intptr)(1) + 17 + 1 + 5 + 1)
 typedef qfloat_f64 qfloat_str_to_f64(const char *_Nonnull str, qfloat_intptr str_size, qfloat_intptr start, qfloat_intptr *_Nonnull end);
 
+// libc
 #if !QFLOAT_NOLIBC
   #include <math.h>
   #include <stdio.h>
@@ -92,6 +95,7 @@ qfloat_intptr qfloat_sprint_f64_libc(qfloat_f64 value, char buffer[_Nonnull stat
   int size = snprintf(buffer, QFLOAT_SIZE_f64, "%.17g", value);
   return qfloat_shorten_f64_string(value, buffer, size, qfloat_str_to_f64_libc);
 }
+// TODO: f32 support?
 #endif
 
 // IEEE "augmented arithmetic operations"
@@ -105,35 +109,36 @@ inline __attribute__((always_inline)) qfloat_f64 qfloat_fma_f64(qfloat_f64 a, qf
   asm volatile("vfmadd213sd %0, %1, %2" : "+x"(result) : "x"(b), "x"(c));
   return result;
 }
-void augmented_mul_f64(qfloat_f64 a, qfloat_f64 b, qfloat_f64 *_Nonnull result, qfloat_f64 *_Nonnull error) {
-  qfloat_f64 p = a * b;
-  *error = qfloat_fma_f64(a, b, -p); /* NOTE: fma() has infinite precision for `a*b` */
-  *result = p;
+qfloat_f64 augmented_mul_f64(qfloat_f64 a, qfloat_f64 b, qfloat_f64 *_Nonnull error) {
+  qfloat_f64 result = a * b;
+  *error = qfloat_fma_f64(a, b, -result); /* NOTE: fma() has infinite precision for `a*b` */
+  return result;
 }
-void augmented_fma_f64(qfloat_f64 x, qfloat_f64 y, qfloat_f64 z, qfloat_f64 *_Nonnull result, qfloat_f64 *_Nonnull error) {
-  qfloat_f64 p = qfloat_fma_f64(x, y, z);
-  *error = qfloat_fma_f64(x, y, z - p);
-  *result = p;
+qfloat_f64 augmented_fma_f64(qfloat_f64 x, qfloat_f64 y, qfloat_f64 z, qfloat_f64 *_Nonnull error) {
+  qfloat_f64 result = qfloat_fma_f64(x, y, z);
+  *error = qfloat_fma_f64(x, y, z - result);
+  return result;
 }
-void augmented_add_f64(qfloat_f64 a, qfloat_f64 b, qfloat_f64 *_Nonnull result, qfloat_f64 *_Nonnull error) {
+qfloat_f64 augmented_add_f64(qfloat_f64 a, qfloat_f64 b, qfloat_f64 *_Nonnull error) {
 #if 0
   augmented_fma(1.0, a, b, result, error);
 #else
-  /* NOTE: float math must be strict here! */
-  qfloat_f64 s = a + b;
-  qfloat_f64 bb = s - a;
-  *error = (a - (s - bb)) + (b - bb);
-  *result = s;
+  qfloat_f64 result = a + b;
+  /* NOTE: float optimizations are disabled here */
+  qfloat_f64 bb = result - a;
+  *error = (a - (result - bb)) + (b - bb);
+  return result;
 #endif
 }
-void augmented_add_fast_f64(qfloat_f64 a, qfloat_f64 b, qfloat_f64 *_Nonnull result, qfloat_f64 *_Nonnull error) {
+qfloat_f64 augmented_add_fast_f64(qfloat_f64 a, qfloat_f64 b, qfloat_f64 *_Nonnull error) {
   qfloat_assert(fabs(a) >= fabs(b));
-  /* NOTE: float math must be strict here! */
-  qfloat_f64 s = a + b;
-  *error = b - (s - a);
-  *result = s;
+  qfloat_f64 result = a + b;
+  /* NOTE: float optimizations are disabled here */
+  *error = b - (result - a);
+  return result;
 }
 
+// nolibc
 qfloat_u64 qfloat_parse_u64_hex(const char *_Nonnull str, qfloat_intptr str_size, qfloat_intptr start, qfloat_intptr *_Nonnull end) {
   qfloat_u64 result = 0;
   qfloat_intptr i = start;
@@ -248,4 +253,5 @@ qfloat_intptr sprint_f64(qfloat_f64 value, char buffer[_Nonnull static QFLOAT_SI
   int size = snprintf(buffer, QFLOAT_SIZE_f64, "%.17g", value);
   return qfloat_shorten_f64_string(value, buffer, size, qfloat_parse_f64_decimal);
 }
+/* NOTE: overwrite FENV_ACCESS pragma to default value */
 #pragma STDC FENV_ACCESS DEFAULT
