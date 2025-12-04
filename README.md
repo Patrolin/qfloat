@@ -5,9 +5,10 @@
 
 int main() {
   char buffer[QFLOAT_SIZE_f64];
+  // if using libc
   sprint_f64_libc(0.3, buffer);
   printf("%s", buffer);  // 0.3
-
+  // else
   sprint_f64(0.2 + 0.1, buffer);
   printf("%s", buffer);  // 0.30000000000000004
 }
