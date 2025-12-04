@@ -51,6 +51,16 @@ void main_multicore(Thread t) {
         printfln4(string("\n% -> %  // libc\n% -> %  // nolibc shortened"), string, s1, uhex, value, string, s2, uhex, bitcast(new_value, f64, u64));
         assert(false);
       }
+      // test sprint_f64() x strtod()
+      new_value = qfloat_str_to_f64_libc(buffer, size, 0, &_end);
+      ok &= new_value == value_f64 || isnan(value_f64);
+      if (expect_small(!ok)) {
+        int libc_size = sprintf(debug_buffer, "%.17g", value_f64);
+        string s1 = (string){debug_buffer, Size(libc_size)};
+        string s2 = (string){buffer, Size(size)};
+        printfln4(string("\n% -> %  // libc\n% -> %  // nolibc shortened x strtod()"), string, s1, uhex, value, string, s2, uhex, bitcast(new_value, f64, u64));
+        assert(false);
+      }
       test(ok, current_run, value, succeeded_ptr);
       // print progress
       print_test_progress(t == 0, current_run, max_runs);
