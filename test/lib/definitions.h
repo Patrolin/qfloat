@@ -160,7 +160,12 @@ forward_declare Noreturn abort();
 // crt
 always_inline_ void zero(byte* ptr, Size size) {
   for (intptr i = 0; i < size; i++) {
-    ptr[size] = 0;
+    ptr[i] = 0;
+  }
+}
+always_inline_ void copy(readonly byte* ptr, Size size, byte* dest) {
+  for (intptr i = 0; i < size; i++) {
+    dest[i] = ptr[i];
   }
 }
 #if HAS_CRT

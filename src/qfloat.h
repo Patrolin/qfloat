@@ -32,6 +32,7 @@ typedef qfloat_f64 qfloat_str_to_f64(const char *_Nonnull str, qfloat_intptr str
   #include <stdio.h>
   #include <stdlib.h>
   #include <string.h>
+  #define qfloat_copy(ptr, size, dest) memcpy(dest, ptr, size)
 #endif
 qfloat_intptr qfloat_shorten_f64_string(qfloat_f64 value, char buffer[_Nonnull static QFLOAT_SIZE_f64], qfloat_intptr size, qfloat_str_to_f64 str_to_float) {
   qfloat_assert(size < QFLOAT_SIZE_f64);
@@ -46,7 +47,7 @@ qfloat_intptr qfloat_shorten_f64_string(qfloat_f64 value, char buffer[_Nonnull s
   }
   // truncate significand upwards
   char shortened[QFLOAT_SIZE_f64];
-  memcpy(shortened, buffer, (qfloat_uintptr)size);
+  qfloat_copy(buffer, (qfloat_uintptr)size, shortened);
   qfloat_intptr _end;
   while (exponent_index > 1) {
     /* NOTE: here we produce a wrong result if it would overflow to a new digit,
@@ -59,27 +60,27 @@ qfloat_intptr qfloat_shorten_f64_string(qfloat_f64 value, char buffer[_Nonnull s
       shortened[j] = '0' + (digit % 10);
       carry = digit >= 10 ? 1 : 0;
     }
-    memcpy(shortened + exponent_index - 1, buffer + exponent_index, (qfloat_uintptr)(size - exponent_index));
+    qfloat_copy(buffer + exponent_index, (qfloat_uintptr)(size - exponent_index), shortened + exponent_index - 1);
     shortened[size - 1] = '\0';
     // if valid transform, copy to original
     if (str_to_float(shortened, size - 1, 0, &_end) != value) break;
-    memcpy(buffer, shortened, (qfloat_uintptr)size);
+    qfloat_copy(shortened, (qfloat_uintptr)size, buffer);
     exponent_index--;
     size--;
   }
   // truncate significand
   qfloat_intptr significand_end = exponent_index;
   qfloat_intptr exponent_end = (qfloat_intptr)size;
-  memcpy(shortened, buffer, (qfloat_uintptr)exponent_index);
+  qfloat_copy(buffer, (qfloat_uintptr)exponent_index, shortened);
   while (significand_end > 1) {
-    memcpy(shortened + significand_end - 1, buffer + exponent_index, (qfloat_uintptr)(size - exponent_index));
+    qfloat_copy(buffer + exponent_index, (qfloat_uintptr)(size - exponent_index), shortened + significand_end - 1);
     shortened[exponent_end - 1] = '\0';
     // if valid transform, update significand_end
     if (str_to_float(shortened, exponent_end - 1, 0, &_end) != value) break;
     significand_end--;
     exponent_end--;
   }
-  memcpy(buffer + significand_end, buffer + exponent_index, (qfloat_uintptr)(size - exponent_index));
+  qfloat_copy(buffer + exponent_index, (qfloat_uintptr)(size - exponent_index), buffer + significand_end);
   buffer[exponent_end] = '\0';
   return exponent_end;
 }
