@@ -284,6 +284,7 @@ qfloat_f64 qfloat_parse_f64_decimal(const char *_Nonnull str, qfloat_intptr str_
   qfloat_intptr i = start;
   bool negative = i < str_size && str[i] == '-';
   if (negative) i++;
+  /* TODO: parse inf, nan */
   // significand
   qfloat_intptr exponent_base10;
   qfloat_dd value = qfloat_parse_f64_significand(str, str_size, i, &i, &exponent_base10);
