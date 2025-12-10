@@ -55,10 +55,10 @@ There exist [algorithms](https://github.com/abolz/Drachennest) to find the short
 
 ## Why printing floats is hard
 1) Floats cannot represent most powers of 10 exactly, e.g. f64s can represent up to `1e22`.
-2) We can represent the significand of an f64 in a u64. However, \
+2) We can represent the significand of an f64 in a u64/i64. However, \
 to represent the value of an f64 in base 10, we need [17 digits](https://www.exploringbinary.com/number-of-digits-required-for-round-trip-conversions).
 but the maximum safe integer (`x-1 != x`) is `2**53` can only represent `Math.log10(2**53) = ~15.9` digits,
-so we lose precision when converting a u64 to an f64, e.g `(f64)16176163832269603ULL == 16176163832269604.0`.
+so we lose precision when converting to an f64, e.g `(f64)16176163832269603ULL == 16176163832269604.0`.
 
 ## New approach
 Instead of trying to find the shortest representation from scratch, why not start with the shortest sufficient representation (which is guaranteed to make our first condition true), and then shorten it until we get the shortest necessary representation:
@@ -88,6 +88,7 @@ string shorten_f64_string(string s) {
 }
 ```
 
-We can also define our own `sprint_f64()` instead of relying on the libc version based on IEEE augmented float operations
+We can also define our own `sprint_f64()` instead of relying on the libc version, with IEEE augmented float operations
 (which nobody implements, but are easy enough to define ourselves). This does give incorrect values when `abs(x) < ~1e-304`
-, as we store the error in a float, which will eventually underflow to 0. However, such small values have little to no practical use anyway.
+, as we store the error in a float, which will eventually underflow to 0. However, such small values have little to no practical use anyway. \
+Similarly we can convert i64 to f64 by also computing the error of the conversion.
