@@ -22,6 +22,8 @@ We want to convert a float into the shortest necessary string representation, me
 1) We are able to convert the string back into the original float.
 2) It is the shortest string representation of that float.
 
+(libc only provides one of these at a time)
+
 Consider the following floats:
 ```c
 // 0x3333333333333333 (0.29999999999999999)
