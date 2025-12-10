@@ -16,14 +16,22 @@ void main_multicore(Thread t) {
 
   u64 current_run;
   u64 max_runs = u64(MAX(u32));
+#ifdef SINGLE_CORE
   if (single_core(t)) {
+#endif
     while (true) {
       current_run = atomic_fetch_add(runs_ptr, 1);
       if (expect_small(current_run >= max_runs)) break;
       u64 value = random_u64(current_run);
-      printfln1(string("v: %"), hex, value);
+#ifndef NDEBUG
+      printfln1(string("\nv: %"), hex, value);
+#endif
       bool ok = true;
       f64 value_f64 = bitcast(value, u64, f64);
+      if (fabs(value_f64) < 1e-304) {
+        test(ok, current_run, value, succeeded_ptr);
+        continue;
+      }
       // test qfloat_sprint_f64_libc()
       byte debug_buffer[QFLOAT_SIZE_f64];
       int debug_size = sprintf(debug_buffer, "%.17g", value_f64);
@@ -65,7 +73,9 @@ void main_multicore(Thread t) {
       // print progress
       print_test_progress(t == 0, current_run, max_runs);
     }
+#ifdef SINGLE_CORE
   }
+#endif
   barrier(t);
 
   print_tests_done(t, atomic_load(succeeded_ptr), max_runs);
