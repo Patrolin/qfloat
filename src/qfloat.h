@@ -110,7 +110,7 @@ inline __attribute__((always_inline)) qfloat_f64 qfloat_fma_f64(qfloat_f64 a, qf
   asm volatile("vfmadd213sd %0, %1, %2" : "+x"(result) : "x"(b), "x"(c));
   return result;
 }
-/* NOTE: these fail for `abs(x) < 1e-304`, but who gives af */
+/* NOTE: these fail (give a slightly incorrect result) for `abs(x) < 1e-304`, but who gives af */
 typedef struct {
   qfloat_f64 high;
   qfloat_f64 low;
