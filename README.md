@@ -91,4 +91,4 @@ string shorten_f64_string(string s) {
 We can also define our own `sprint_f64()` instead of relying on the libc version, with IEEE augmented float operations
 (which nobody implements, but are easy enough to define ourselves). This does give incorrect values when `abs(x) < ~1e-304`
 , as we store the error in a float, which will eventually underflow to 0. However, such small values have little to no practical use anyway. \
-Similarly we can convert i64 to f64 by also computing the error of the conversion.
+Similarly we can convert an i64 to an f64 by also computing the error of the conversion.

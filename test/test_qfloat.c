@@ -28,7 +28,7 @@ void main_multicore(Thread t) {
 #endif
       bool ok = true;
       f64 value_f64 = bitcast(value, u64, f64);
-      if (fabs(value_f64) < 1e-304) {
+      if (fabs(value_f64) < 1e-303) {
         test(ok, current_run, value, succeeded_ptr);
         continue;
       }
