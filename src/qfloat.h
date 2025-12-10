@@ -22,8 +22,9 @@ _Static_assert(sizeof(qfloat_f64) == 8, "qfloat_f64");
 #define qfloat_add_overflow(a, b, dest) __builtin_add_overflow(a, b, dest)
 #define qfloat_mul_overflow(a, b, dest) __builtin_mul_overflow(a, b, dest)
 
+#define EXPLICIT_MANTISSA_BITS_f64 52
+#define IMPLICIT_MANTISSA_BITS_f64 53
 /* NOTE: f64 needs at most 17 (integer+fraction) digits: https://www.exploringbinary.com/number-of-digits-required-for-round-trip-conversions/
-    EXPLICIT_MANTISSA_BITS_f64 = 52
     Math.ceil(EXPLICIT_MANTISSA_BITS_f64 * Math.log10(2)) + 1 = 17 */
 /* NOTE: sign(1) + digits(17) + decimal_point(1) + signed_exponent(5) + null_terminator(1) */
 #define QFLOAT_SIZE_f64 ((qfloat_intptr)(1) + 17 + 1 + 5 + 1)

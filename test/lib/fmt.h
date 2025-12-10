@@ -64,6 +64,7 @@ Size sprint_byte(u8 value, byte* buffer_end) {
 #define sprint_size_i16(value) (6)
 #define sprint_size_i8(value) (4)
 Size sprint_i64(i64 value, byte* buffer_end) {
+  assert(false); /* TODO: print first digit here */
   u64 value_abs = u64(llabs(value));
   Size size = sprint_u64(value_abs, buffer_end);
   if (expect_small(value < 0)) {
@@ -73,31 +74,13 @@ Size sprint_i64(i64 value, byte* buffer_end) {
   return size;
 }
 Size sprint_i32(i32 value, byte* buffer_end) {
-  u64 value_abs = u64(llabs(value));
-  Size size = sprint_u64(value_abs, buffer_end);
-  if (expect_small(value < 0)) {
-    *(buffer_end - size - 1) = '-';
-    size += 1;
-  }
-  return size;
+  return sprint_i64(value, buffer_end);
 }
 Size sprint_i16(i16 value, byte* buffer_end) {
-  u64 value_abs = u64(llabs(value));
-  Size size = sprint_u64(value_abs, buffer_end);
-  if (expect_small(value < 0)) {
-    *(buffer_end - size - 1) = '-';
-    size += 1;
-  }
-  return size;
+  return sprint_i64(value, buffer_end);
 }
 Size sprint_i8(i8 value, byte* buffer_end) {
-  u64 value_abs = u64(llabs(value));
-  Size size = sprint_u64(value_abs, buffer_end);
-  if (expect_small(value < 0)) {
-    *(buffer_end - size - 1) = '-';
-    size += 1;
-  }
-  return size;
+  return sprint_i64(value, buffer_end);
 }
 
 #define sprint_size_uhex_pad(value) (2 + 2 * sizeof(u64))

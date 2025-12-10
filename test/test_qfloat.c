@@ -1,4 +1,5 @@
 // ./run -crt
+#include "lib/definitions.h"
 #define QFLOAT_NOLIBC !HAS_CRT
 #include "../src/qfloat.h"
 #include "lib/all.h"
