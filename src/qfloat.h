@@ -139,7 +139,7 @@ qfloat_dd augmented_div_f64(qfloat_dd a, qfloat_f64 b) {
   qfloat_f64 result = a.high + b;
   qfloat_f64 error = b - (result - a.high) + (a.low);
   // output
-  qfloat_f64 new_high = result;
+  qfloat_f64 new_high = result + error;
   qfloat_f64 new_low = error - (new_high - result);
   return (qfloat_dd){new_high, new_low};
 }*/
