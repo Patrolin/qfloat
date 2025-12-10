@@ -125,11 +125,10 @@ qfloat_dd augmented_mul_f64(qfloat_dd a, qfloat_f64 b) {
   return (qfloat_dd){new_high, new_low};
 }
 qfloat_dd augmented_div_f64(qfloat_dd a, qfloat_f64 b) {
-  // initial approximation
+  // divide
   qfloat_f64 result = a.high / b;
   qfloat_f64 error = (qfloat_fma_f64(-result, b, a.high) + a.low) / b;
-
-  // combine for double-double result
+  // output
   qfloat_f64 new_high = result + error;
   qfloat_f64 new_low = error - (new_high - result);
   return (qfloat_dd){new_high, new_low};
