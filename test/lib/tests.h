@@ -22,7 +22,7 @@ void test(bool condition, u64 current_run, u64 value, u64* succeeded_ptr) {
   if (expect_likely(condition)) {
     atomic_fetch_add(succeeded_ptr, 1);
   } else {
-    printf2(string("\x1b[2K\rfailed: i: %, v: %\n"), u64, current_run, uhex_pad, value);
+    printf2(string("\x1b[2K\rfailed: i: %, v: %\n"), u64, current_run, hex_pad, value);
   }
 }
 void print_tests_done(Thread t, u64 succeeded, u64 max_runs) {

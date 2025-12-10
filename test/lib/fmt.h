@@ -83,9 +83,9 @@ Size sprint_i8(i8 value, byte* buffer_end) {
   return sprint_i64(value, buffer_end);
 }
 
-#define sprint_size_uhex_pad(value) (2 + 2 * sizeof(u64))
+#define sprint_size_hex_pad(value) (2 + 2 * sizeof(u64))
 byte* HEX_DIGITS = "0123456789ABCDEF";
-Size sprint_uhex_pad(u64 value, byte* buffer_end) {
+Size sprint_hex_pad(u64 value, byte* buffer_end) {
   intptr i = 0;
   do {
     u64 digit = value & 0xf;
@@ -96,8 +96,8 @@ Size sprint_uhex_pad(u64 value, byte* buffer_end) {
   buffer_end[--i] = '0';
   return (Size)(-i);
 }
-#define sprint_size_uhex(value) (2 + 2 * sizeof(u64))
-Size sprint_uhex(u64 value, byte* buffer_end) {
+#define sprint_size_hex(value) (2 + 2 * sizeof(u64))
+Size sprint_hex(u64 value, byte* buffer_end) {
   intptr i = 0;
   do {
     u64 digit = value & 0xf;
@@ -108,8 +108,6 @@ Size sprint_uhex(u64 value, byte* buffer_end) {
   buffer_end[--i] = '0';
   return (Size)(-i);
 }
-#define sprint_size_ihex(value) sprint_size_uhex(value)
-#define sprint_ihex(value, buffer_end) sprint_uhex(u64(value), buffer_end)
 #define sprint_size_fhex(value) sprint_size_uhex(value)
 #define sprint_fhex(value, buffer_end) sprint_uhex(bitcast(value, f64, u64), buffer_end)
 
@@ -300,8 +298,8 @@ void fprint(FileHandle file, string str) {
 
 // assert()
 #undef assert
-#define assert(condition) assert_impl(condition, __FILE__ ":" STR(__LINE__) " assert(" #condition ")\n")
-#define assert1(condition, msg_cstr) assert_impl(condition, __FILE__ ":" STR(__LINE__) " " msg_cstr "\n")
+#define assert(condition) assert_impl(condition, " " __FILE__ ":" STR(__LINE__) " assert(" #condition ")\n")
+#define assert1(condition, msg_cstr) assert_impl(condition, " " __FILE__ ":" STR(__LINE__) " " msg_cstr "\n")
 #define assert_impl(condition, msg_cstr) ({ \
   if (expect_unlikely(!(condition))) {      \
     fprint(STDERR, string(msg_cstr));       \

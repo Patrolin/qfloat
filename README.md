@@ -2,6 +2,7 @@
 ```c
 //#define QFLOAT_NOLIBC 1
 //#define qfloat_copy(ptr, size, dest) copy(ptr, size, dest)
+//#define qfloat_assert(condition) assert(condition)
 /* NOTE: overwrites `#pragma STDC FENV_ACCESS` to `DEFAULT`, to disable float optimizations locally */
 #include "qfloat.h"
 
@@ -52,8 +53,15 @@ print_float(y);  // "0.30000000000000004"
 ## Existing solutions
 There exist [algorithms](https://github.com/abolz/Drachennest) to find the shortest string representation of a float (for any float rounding mode), but they involve a lot of LoC and code-gen'd tables.
 
+## Why printing floats is hard
+1) Floats cannot represent most powers of 10 exactly, e.g. f64s can represent up to `1e22`.
+2) We can represent the significand of an f64 in a u64. However, \
+to represent the value of an f64 in base 10, we need [17 digits](https://www.exploringbinary.com/number-of-digits-required-for-round-trip-conversions).
+but the maximum safe integer (`x-1 != x`) is `2**53` can only represent `Math.log10(2**53) = ~15.9` digits,
+so we lose precision when converting a u64 to an f64, e.g `(f64)16176163832269603ULL == 16176163832269604.0`.
+
 ## New approach
-Instead of trying to find the shortest representation from scratch, why not start with the [shortest sufficient representation](https://www.exploringbinary.com/number-of-digits-required-for-round-trip-conversions) (which is guaranteed to make our first condition true), and then shorten it until we get the shortest necessary representation:
+Instead of trying to find the shortest representation from scratch, why not start with the shortest sufficient representation (which is guaranteed to make our first condition true), and then shorten it until we get the shortest necessary representation:
 ```c
 string sx = sprint_f64(x);  // "0.29999999999999999"
 shorten_f64_string(sx);     // "0.3"
