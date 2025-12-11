@@ -180,10 +180,6 @@ extern void* memset(void* ptr, int x, Size size) {
   #define fma_f64(a, b, c) fma_f64_impl(__COUNTER__, a, b, c)
 #endif
 #if ARCH_X64
-  /* NOTE: windows starts aligned to 8B, while linux starts (correctly) aligned to 16B
-  thus we have to realign ourselves either way... */
-  #define ALIGN_STACK_POINTER() asm volatile("and rsp, -16" ::: "rsp");
-  #define CALL(name) asm volatile("call " #name)
   #define cpu_relax() asm volatile("pause")
   #define fma_f64_impl(C, a, b, c) ({     \
     f64 VAR(fma, C) = a;                  \

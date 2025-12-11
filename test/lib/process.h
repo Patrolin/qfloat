@@ -38,20 +38,16 @@ CINT main() {
   _start_process();
 }
 #else
-  #if 0
-/* NOTE: naked attribute for correctness, but we don't really need it,
-  since we have to align the stack pointer manually either way...
-  NOTE: this doesn't actually work together with -flto */
-naked Noreturn _start() {
-  ALIGN_STACK_POINTER();
-  CALL(_start_process);
-}
+  /* NOTE: windows starts aligned to 8B, while linux starts (correctly) aligned to 16B
+  thus we have to realign the stack pointer either way... */
+  #if ARCH_X64
+    #define _start_impl() asm volatile("xor ebp, ebp; and rsp, -16; call _start_process" ::: "rbp", "rsp");
   #else
-Noreturn _start() {
-  ALIGN_STACK_POINTER();
-  _start_process();
-}
+ASSERT(false);
   #endif
+naked Noreturn _start() {
+  _start_impl();
+}
 #endif
 
 // exit
