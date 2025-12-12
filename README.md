@@ -19,10 +19,14 @@ int main() {
 
 ## Motivation
 We want to convert a float into the shortest necessary string representation, meaning:
-1) We are able to convert the string back into the original float.
-2) It is the shortest string representation of that float.
+1) It is the shortest string representation of that float.
+2) We are able to convert the string back into the original float.
 
-(libc only provides one of these at a time)
+(libc only provides either 1. or 2., but not both)
+
+We also want to be able to parse arbitrary float strings:
+1) We are able to parse the shortest string representation correctly, with the correct rounding (round-to-even).
+2) We are able to parse arbitrary-length user input correctly.
 
 Consider the following floats:
 ```c
@@ -55,12 +59,14 @@ print_float(y);  // "0.30000000000000004"
 ## Existing solutions
 There exist [algorithms](https://github.com/abolz/Drachennest) to find the shortest string representation of a float (for any float rounding mode), but they involve a lot of LoC and code-gen'd tables.
 
-## Why printing floats is hard
+## Why parsing/printing floats is hard
 1) Floats cannot represent most powers of 10 exactly, e.g. f64s can represent up to `1e22`.
 2) We can represent the significand of an f64 in a u64/i64. However, \
 to represent the value of an f64 in base 10, we need [17 digits](https://www.exploringbinary.com/number-of-digits-required-for-round-trip-conversions).
 but the maximum safe integer (`x-1 != x`) is `2**53` can only represent `Math.log10(2**53) = ~15.9` digits,
 so we lose precision when converting to an f64, e.g `(f64)16176163832269603ULL == 16176163832269604.0`.
+3) Parsing more digits from a string than the float has precision requires infinite precision (big integers).
+  TODO: how do we parse an f32 from an f64 string?
 
 ## New approach
 Instead of trying to find the shortest representation from scratch, why not start with the shortest sufficient representation (which is guaranteed to make our first condition true), and then shorten it until we get the shortest necessary representation:
