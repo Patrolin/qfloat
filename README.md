@@ -62,8 +62,8 @@ There exist [algorithms](https://github.com/abolz/Drachennest) to find the short
 ## Why parsing/printing floats is hard
 1) Floats cannot represent most powers of 10 exactly, e.g. f64s can represent up to `1e22`.
 2) We can represent the significand of an f64 in a u64/i64. However, \
-to represent the value of an f64 in base 10, we need [17 digits](https://www.exploringbinary.com/number-of-digits-required-for-round-trip-conversions).
-but the maximum safe integer (`x-1 != x`) is `2**53` can only represent `Math.log10(2**53) = ~15.9` digits,
+to represent the value of an f64, we need [17 digits in base 10](https://www.exploringbinary.com/number-of-digits-required-for-round-trip-conversions).
+but the maximum safe integer (`x+1 != x`) is `2**53-1` can only represent `Math.log10(2**53-1) = ~15.9` digits,
 so we lose precision when converting to an f64, e.g `(f64)16176163832269603ULL == 16176163832269604.0`.
 3) Parsing more digits from a string than the float has precision requires infinite precision (big integers).
   TODO: how do we parse an f32 from an f64 string?
