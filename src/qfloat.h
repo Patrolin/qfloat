@@ -256,7 +256,8 @@ qfloat_dd qfloat_parse_f64_significand(const char *_Nonnull str, qfloat_intptr s
   return result_dd;
 }
 // TODO: use a table?
-qfloat_f64 SAFE_POWERS_OF_10[22] = {
+qfloat_f64 SAFE_POWERS_OF_10[23] = {
+    1e0,
     1e1,
     1e2,
     1e3,
