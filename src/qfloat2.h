@@ -90,7 +90,7 @@ bool qf_nonnull(3) qf_mul_overflow_i64(int64_t a, int64_t b, int64_t *result_ptr
 
 #define QF_BASE10_DIGITS_f64 17
 
-// parsing
+// parsing // TODO: test these
 uint64_t qf_nonnull(1, 4) qf_parse_u64_decimal(const char *str, intptr_t str_size, intptr_t start, intptr_t *end) {
   uint64_t result = 0;
   intptr_t i = start;
