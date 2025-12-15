@@ -14,6 +14,7 @@ QF_ASSERT(sizeof(float) == 4);
 QF_ASSERT(sizeof(char) == 1);
 
 #ifndef qf_assert
+  #include <assert.h>
   #define qf_assert(condition) assert(condition)
 #endif
 #if defined(__clang__) || defined(__GNUC__)
@@ -26,6 +27,7 @@ QF_ASSERT(sizeof(char) == 1);
   #define qf_unlikely(condition) (condition)
   #include <intrin.h> /* NOTE: required for overflow in MSVC */
 #endif
+#define qf_min(a, b) ((a < b) ? (a) : (b))
 
 bool qf_nonnull(3) qf_add_overflow_u64(uint64_t a, uint64_t b, uint64_t *result_ptr) {
 #if defined(__clang__) || defined(__GNUC__)
@@ -43,20 +45,20 @@ bool qf_nonnull(3) qf_add_overflow_u64(uint64_t a, uint64_t b, uint64_t *result_
 bool qf_nonnull(3) qf_add_overflow_i64(int64_t a, int64_t b, int64_t *result_ptr) {
   return qf_add_overflow_u64((uint64_t)a, (uint64_t)b, (uint64_t *)result_ptr);
 }
-bool qf_nonnull(3) qf_sub_overflow_i64(int64_t a, int64_t b, int64_t *result_ptr) {
-#if defined(__clang__) || defined(__GNUC__)
-  /* NOTE: clang/gcc emit `neg; add` instead of `sub` unless we use the intrinsic... */
-  int64_t result;
-  bool overflow = __builtin_sub_overflow(a, b, &result);
-  if (qf_likely(!overflow)) {
-    *result_ptr = result;
-  }
-  return overflow;
-#else
-  /* NOTE: MSVC doesn't have a subtract overflow intrinsic, but it inlines and optimizes to a `sub` instruction */
-  return qf_add_overflow_i64(a, -b, result_ptr);
-#endif
-}
+// bool qf_nonnull(3) qf_sub_overflow_i64(int64_t a, int64_t b, int64_t *result_ptr) {
+// #if defined(__clang__) || defined(__GNUC__)
+//   /* NOTE: clang/gcc emit `neg; add` instead of `sub` unless we use the intrinsic... */
+//   int64_t result;
+//   bool overflow = __builtin_sub_overflow(a, b, &result);
+//   if (qf_likely(!overflow)) {
+//     *result_ptr = result;
+//   }
+//   return overflow;
+// #else
+//   /* NOTE: MSVC doesn't have a subtract overflow intrinsic, but it inlines and optimizes to a `sub` instruction */
+//   return qf_add_overflow_i64(a, -b, result_ptr);
+// #endif
+// }
 bool qf_nonnull(3) qf_mul_overflow_u64(uint64_t a, uint64_t b, uint64_t *result_ptr) {
 #if defined(__clang__) || defined(__GNUC__)
   uint64_t result;
@@ -104,30 +106,18 @@ uint64_t qf_nonnull(1, 4) qf_parse_u64_decimal(const char *str, intptr_t str_siz
 }
 int64_t qf_nonnull(1, 4) qf_parse_i64_decimal(const char *str, intptr_t str_size, intptr_t start, intptr_t *end) {
   // sign
-  intptr_t i = start;
-  bool negative = str[i] == '-';
-  if (negative || str[i] == '+') {
-    i++;
-  }
+  bool negative = str[start] == '-';
+  intptr_t i = negative || str[start] == '+' ? start + 1 : start;
   // value
   int64_t result = 0;
-  if (negative) {
-    /* NOTE: `-MIN(i64)` cannot be represented in a positive i64... */
-    while (i < str_size) {
-      uint8_t digit = str[i] - '0';
-      bool did_overflow = qf_mul_overflow_i64(result, 10, &result);
-      did_overflow |= qf_sub_overflow_i64(result, (int64_t)digit, &result);
-      if (digit >= 10 || did_overflow) break;
-      i++;
-    }
-  } else {
-    while (i < str_size) {
-      uint8_t digit = str[i] - '0';
-      bool did_overflow = qf_mul_overflow_i64(result, 10, &result);
-      did_overflow |= qf_add_overflow_i64(result, (int64_t)digit, &result);
-      if (digit >= 10 || did_overflow) break;
-      i++;
-    }
+  int64_t sign = negative ? -1 : 1; /* NOTE: `MIN(i64)` does not fit into a positive `i64` */
+  while (i < str_size) {
+    int64_t digit = (int64_t)(str[i] - '0');
+    bool did_overflow = qf_mul_overflow_i64(result, 10, &result);
+    digit = negative ? -digit : digit;
+    did_overflow |= qf_add_overflow_i64(result, digit, &result);
+    if (digit >= 10 || did_overflow) break;
+    i++;
   }
   *end = i;
   return result;
@@ -136,21 +126,21 @@ uint64_t qf_nonnull(1, 4) qf_parse_u64_hex(const char *str, intptr_t str_size, i
   uint64_t result = 0;
   intptr_t i = start;
   while (i < str_size) {
+    uint64_t digit = 16;
     char c = str[i];
-    uint8_t digit = 16;
-    switch (c) {
-      case '0' ... '9':
-        digit = c - '0';
-        break;
-      case 'a' ... 'f':
-        digit = c - 'a' + 10;
-        break;
-      case 'A' ... 'F':
-        digit = c - 'A' + 10;
-        break;
+    char decimal = c - '0';
+    if (decimal <= '9' - '0') {
+      digit = decimal;
+    } else {
+      char uppercase_hex = c - 'A';
+      char lowercase_hex = c - 'a';
+      char hex = qf_min(uppercase_hex, lowercase_hex);
+      if (hex <= 'F' - 'A') {
+        digit = hex + 10;
+      }
     }
     bool did_overflow = qf_mul_overflow_u64(result, 16, &result);
-    did_overflow |= qf_add_overflow_u64(result, (uint64_t)digit, &result);
+    did_overflow |= qf_add_overflow_u64(result, digit, &result);
     if (digit >= 16 || did_overflow) break;
     i++;
   }

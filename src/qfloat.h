@@ -12,6 +12,7 @@ typedef uintptr_t qfloat_uintptr;
 _Static_assert(sizeof(qfloat_f64) == 8, "qfloat_f64");
 
 #ifndef qfloat_assert
+  #include <assert.h>
   #define qfloat_assert(condition) assert(condition)
 #endif
 
