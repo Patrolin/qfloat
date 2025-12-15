@@ -110,7 +110,6 @@ int64_t qf_nonnull(1, 4) qf_parse_i64_decimal(const char *str, intptr_t str_size
   intptr_t i = negative || str[start] == '+' ? start + 1 : start;
   // value
   int64_t result = 0;
-  int64_t sign = negative ? -1 : 1; /* NOTE: `MIN(i64)` does not fit into a positive `i64` */
   while (i < str_size) {
     int64_t digit = (int64_t)(str[i] - '0');
     bool did_overflow = qf_mul_overflow_i64(result, 10, &result);
