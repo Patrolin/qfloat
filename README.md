@@ -56,17 +56,19 @@ print_float(x);  // "0.3"
 print_float(y);  // "0.30000000000000004"
 ```
 
-## Existing solutions
-There exist [algorithms](https://github.com/abolz/Drachennest) to find the shortest string representation of a float (for any float rounding mode), but they involve a lot of LoC and code-gen'd tables.
-
 ## Why parsing/printing floats is hard
-1) Floats cannot represent most powers of 10 exactly, e.g. f64s can represent up to `1e22`.
-2) We can represent the significand of an f64 in a u64/i64. However, \
+1) Floats cannot represent most powers of 10 exactly, e.g. f64s can represent up to `1e22` exactly.
+2) We can represent the significand of an f64 in a u64 or i64. However, \
 to represent the value of an f64, we need [17 digits in base 10](https://www.exploringbinary.com/number-of-digits-required-for-round-trip-conversions).
 but the maximum safe integer (`x+1 != x`) is `2**53-1` can only represent `Math.log10(2**53-1) = ~15.9` digits,
 so we lose precision when converting to an f64, e.g `(f64)16176163832269603ULL == 16176163832269604.0`.
 3) Parsing more digits from a string than the float has precision requires infinite precision (big integers).
   TODO: how do we parse an f32 from an f64 string?
+4) It's possible to parse floats with augmented IEEE augmented float operations, but it fails for floats with `abs(value) < ~1e-303`. This is fine for any practical purposes, but it's probably slower than (and roughly the same number of lines as) the correct algorithm anyways.
+5) Printing floats requires handling float rounding modes correctly, which is unlikely to happen in a naive algorithm.
+
+## Existing solutions
+There exist [algorithms](https://github.com/abolz/Drachennest) to find the shortest string representation of a float (for any float rounding mode), but they involve a lot of LoC and code-gen'd tables.
 
 ## New approach
 Instead of trying to find the shortest representation from scratch, why not start with the shortest sufficient representation (which is guaranteed to make our first condition true), and then shorten it until we get the shortest necessary representation:
