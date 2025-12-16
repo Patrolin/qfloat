@@ -5,6 +5,7 @@
 #include "../src/qfloat2.h"
 
 void main_multicore(Thread t) {
+  // TODO: fix race condition...
   // qf_parse_u64_decimal()
   TestGroup* group;
   if (test_group(t, &group, string("qf_parse_u64_decimal()"), 1)) {
