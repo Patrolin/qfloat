@@ -32,7 +32,7 @@ void test_summary(Thread t, TestGroup* group) {
   if (single_core(t)) {
     u64 test_count = group->test_count;
     u64 pass_count = test_count - group->fail_count;
-    printf3(string(DELETE_LINE "test %: %/% passed \n"), string, group->name, u64, pass_count, u64, test_count);
+    printf3(string(DELETE_LINE "   %: %/% tests passed\n"), string, group->name, u64, pass_count, u64, test_count);
   }
 }
 
@@ -43,25 +43,15 @@ void test_summary(Thread t, TestGroup* group) {
     t2 out;          \
   } Test(t1, t2);
 #define check(thread, group, condition, t1, v1) check_impl(__COUNTER__, thread, group, condition, t1, v1)
-#define check_impl(C, thread, group, condition, t1, v1) ({                                                                    \
-  u64 VAR(test_count, C) = atomic_fetch_add(&group->test_count, 1);                                                           \
-  if (expect_unlikely(!(condition))) {                                                                                        \
-    u64 fail_count = atomic_add_fetch(&group->fail_count, 1);                                                                 \
-    printf2(string(DELETE_LINE " test % failed for %\n"), string, group->name, t1, v1);                                       \
-    abort();                                                                                                                  \
-  }                                                                                                                           \
-  if (expect_small(t == 0)) {                                                                                                 \
-    u64 VAR(pass_count, C) = VAR(test_count, C) - group->fail_count;                                                          \
-    printf3(string(DELETE_LINE "test %: %/% passed"), string, group->name, u64, VAR(pass_count, C), u64, VAR(test_count, C)); \
-  }                                                                                                                           \
+#define check_impl(C, thread, group, condition, t1, v1) ({                                                                 \
+  u64 VAR(test_count, C) = atomic_fetch_add(&group->test_count, 1);                                                        \
+  if (expect_unlikely(!(condition))) {                                                                                     \
+    u64 fail_count = atomic_add_fetch(&group->fail_count, 1);                                                              \
+    printf2(string(DELETE_LINE "  %: test failed for %\n"), string, group->name, t1, v1);                                  \
+    abort();                                                                                                               \
+  }                                                                                                                        \
+  if (expect_small(t == 0)) {                                                                                              \
+    u64 VAR(pass_count, C) = VAR(test_count, C) - group->fail_count;                                                       \
+    printf3(string(DELETE_LINE "  %: %/% passed"), string, group->name, u64, VAR(pass_count, C), u64, VAR(test_count, C)); \
+  }                                                                                                                        \
 })
-void print_tests_done(Thread t, u64 succeeded, u64 max_runs) {
-  if (expect_likely(t != 0)) {
-    return;
-  }
-  if (succeeded == max_runs) {
-    println(string, string(DELETE_LINE "All tests passed!"));
-  } else {
-    printfln1(string(DELETE_LINE "% tests failed..."), u64, max_runs - succeeded);
-  }
-}
