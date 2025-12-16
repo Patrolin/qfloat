@@ -22,7 +22,7 @@ typedef struct {
 bool NONNULL(2) test_group(Thread t, TestGroup** group, string name, Thread thread_count) {
   if (single_core(t)) {
     *group = arena_alloc(global_arena, TestGroup);
-    (*group)->name = name;
+    **group = (TestGroup){.name = name};
   }
   barrier_scatter(t, group);
   return thread_count == 0 || t < thread_count;
@@ -36,15 +36,16 @@ void test_summary(Thread t, TestGroup* group) {
   }
 }
 
-#define Test(t1, t2) Test_##t1##_##t2
+// #define Test(t1, t2) Test_##t1##_##t2
+#define Test(t1, t2) Test
 #define TEST(t1, t2) \
   typedef struct {   \
     t1 in;           \
     t2 out;          \
-  } Test(t1, t2);
+  } Test(t1, t2)
 #define check(thread, group, condition, t1, v1) check_impl(__COUNTER__, thread, group, condition, t1, v1)
 #define check_impl(C, thread, group, condition, t1, v1) ({                                                                 \
-  u64 VAR(test_count, C) = atomic_fetch_add(&group->test_count, 1);                                                        \
+  u64 VAR(test_count, C) = atomic_add_fetch(&group->test_count, 1);                                                        \
   if (expect_unlikely(!(condition))) {                                                                                     \
     u64 fail_count = atomic_add_fetch(&group->fail_count, 1);                                                              \
     printf2(string(DELETE_LINE "  %: test failed for %\n"), string, group->name, t1, v1);                                  \
