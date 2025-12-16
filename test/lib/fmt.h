@@ -3,6 +3,24 @@
 #include "math.h"
 #include "os.h"
 
+// fprint()
+#define DELETE_LINE "\x1b[2K\r"
+#define NEWLINE "\n"
+
+void fprint(FileHandle file, string str) {
+#if OS_WINDOWS
+  DWORD bytes_written;
+  DWORD chars_to_write = downcast(Size, str.size, DWORD);
+  WriteFile(file, str.ptr, chars_to_write, &bytes_written, 0);
+  assert_printless(bytes_written == str.size);
+#elif OS_LINUX
+  intptr bytes_written = write(file, str.ptr, str.size);
+  assert_printless(bytes_written == str.size);
+#else
+  assert_printless(false);
+#endif
+}
+
 // sprint()
 #define sprint_size1(t1, v1) (CONCAT(sprint_size_, t1)(v1))
 #define sprint_size2(t1, v1, t2, v2) (CONCAT(sprint_size_, t1)(v1) + CONCAT(sprint_size_, t2)(v2))
@@ -97,7 +115,8 @@ Size sprint_hex_pad(u64 value, byte* buffer_end) {
   return (Size)(-i);
 }
 #define sprint_size_hex(value) (2 + 2 * sizeof(u64))
-Size sprint_hex(u64 value, byte* buffer_end) {
+#define sprint_hex(value, buffer_end) sprint_hex_impl((u64)value, buffer_end)
+Size sprint_hex_impl(u64 value, byte* buffer_end) {
   intptr i = 0;
   do {
     u64 digit = value & 0xf;
@@ -281,32 +300,6 @@ Size sprint_intptr(intptr value, byte* buffer_end) {
   VAR(size, C);                                                                \
 })
 
-// fprint()
-void fprint(FileHandle file, string str) {
-#if OS_WINDOWS
-  DWORD bytes_written;
-  DWORD chars_to_write = downcast(Size, str.size, DWORD);
-  WriteFile(file, str.ptr, chars_to_write, &bytes_written, 0);
-  assert(bytes_written == str.size);
-#elif OS_LINUX
-  intptr bytes_written = write(file, str.ptr, str.size);
-  assert(bytes_written == str.size);
-#else
-  assert(false);
-#endif
-}
-
-// assert()
-#undef assert
-#define assert(condition) assert_impl(condition, " " __FILE__ ":" STR(__LINE__) " assert(" #condition ")\n")
-#define assert1(condition, msg_cstr) assert_impl(condition, " " __FILE__ ":" STR(__LINE__) " " msg_cstr "\n")
-#define assert_impl(condition, msg_cstr) ({ \
-  if (expect_unlikely(!(condition))) {      \
-    fprint(STDERR, string(msg_cstr));       \
-    abort();                                \
-  }                                         \
-})
-
 // print()
 void print_string(string str) {
   fprint(STDOUT, str);
@@ -335,7 +328,7 @@ void print_string(string str) {
 // printf()
 #define printf1(format, t1, v1) printf1_impl(__COUNTER__, format, t1, v1)
 #define printf1_impl(C, format, t1, v1) ({                              \
-  intptr VAR(max_size, C) = sprint_size2(string, format, t1, v1);       \
+  Size VAR(max_size, C) = sprint_size2(string, format, t1, v1);         \
   STACK_BUFFER(VAR(buffer, C), VAR(max_size, C), VAR(ptr_end, C));      \
                                                                         \
   Size VAR(size, C) = sprintf1(VAR(ptr_end, C), format, t1, v1);        \
@@ -343,22 +336,22 @@ void print_string(string str) {
   print_string(VAR(msg, C));                                            \
 })
 #define printf2(format, t1, v1, t2, v2) printf2_impl(__COUNTER__, format, t1, v1, t2, v2)
-#define printf2_impl(C, format, t1, v1, t2, v2) ({                        \
-  intptr VAR(max_size, C) = sprint_size3(string, format, t1, v1, t2, v2); \
-  STACK_BUFFER(VAR(buffer, C), VAR(max_size, C), VAR(ptr_end, C));        \
-                                                                          \
-  Size VAR(size, C) = sprintf2(VAR(ptr_end, C), format, t1, v1, t2, v2);  \
-  string VAR(msg, C) = sprint_to_string(VAR(ptr_end, C), VAR(size, C));   \
-  print_string(VAR(msg, C));                                              \
+#define printf2_impl(C, format, t1, v1, t2, v2) ({                       \
+  Size VAR(max_size, C) = sprint_size3(string, format, t1, v1, t2, v2);  \
+  STACK_BUFFER(VAR(buffer, C), VAR(max_size, C), VAR(ptr_end, C));       \
+                                                                         \
+  Size VAR(size, C) = sprintf2(VAR(ptr_end, C), format, t1, v1, t2, v2); \
+  string VAR(msg, C) = sprint_to_string(VAR(ptr_end, C), VAR(size, C));  \
+  print_string(VAR(msg, C));                                             \
 })
 #define printf3(format, t1, v1, t2, v2, t3, v3) printf3_impl(__COUNTER__, format, t1, v1, t2, v2, t3, v3)
-#define printf3_impl(C, format, t1, v1, t2, v2, t3, v3) ({                        \
-  intptr VAR(max_size, C) = sprint_size4(string, format, t1, v1, t2, v2, t3, v3); \
-  STACK_BUFFER(VAR(buffer, C), VAR(max_size, C), VAR(ptr_end, C));                \
-                                                                                  \
-  Size VAR(size, C) = sprintf3(VAR(ptr_end, C), format, t1, v1, t2, v2, t3, v3);  \
-  string VAR(msg, C) = sprint_to_string(VAR(ptr_end, C), VAR(size, C));           \
-  print_string(VAR(msg, C));                                                      \
+#define printf3_impl(C, format, t1, v1, t2, v2, t3, v3) ({                       \
+  Size VAR(max_size, C) = sprint_size4(string, format, t1, v1, t2, v2, t3, v3);  \
+  STACK_BUFFER(VAR(buffer, C), VAR(max_size, C), VAR(ptr_end, C));               \
+                                                                                 \
+  Size VAR(size, C) = sprintf3(VAR(ptr_end, C), format, t1, v1, t2, v2, t3, v3); \
+  string VAR(msg, C) = sprint_to_string(VAR(ptr_end, C), VAR(size, C));          \
+  print_string(VAR(msg, C));                                                     \
 })
 
 // printfln()

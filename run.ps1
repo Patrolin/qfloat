@@ -22,7 +22,7 @@ if ($opt) {
 } else {
   $cargs += @("-O0", "-g")
 }
-$input = "test/test_qfloat.c"
+$input = "test/test_qfloat2.c"
 $output = "test_qfloat"
 
 rm ($output + ".rdi") -ErrorAction SilentlyContinue;

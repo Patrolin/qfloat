@@ -1,5 +1,6 @@
 // ./run -crt
-#include "lib/all.h"
+#include "lib/tests.h"
+#include "lib/threads.h"
 #define QFLOAT_NOLIBC !HAS_CRT
 #include "../src/qfloat.h"
 #include <stdio.h>

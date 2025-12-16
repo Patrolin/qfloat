@@ -124,7 +124,11 @@ ASSERT(OS_HUGE_PAGE_SIZE == 2 * MebiByte);
 #define global static
 #define readonly const
 #define restrict __restrict
-// #define nonnull _Nonnull /* NOTE: clang doesn't have an option to assume nullable by default... */
+#if defined(__clang__) || defined(__GNUC__)
+  #define NONNULL(...) __attribute__((nonnull(__VA_ARGS__)))
+#else
+  #define NONNULL(...)
+#endif
 #define align(n) __attribute__((aligned(n)))
 #define vector_size(n) __attribute__((vector_size(n)))
 // proc keywords
@@ -149,10 +153,18 @@ ASSERT(OS_HUGE_PAGE_SIZE == 2 * MebiByte);
    Should only be used if there aren't any `break` or `return` statements in the block. */
 #define expect_small(condition) expect_likely(condition)
 forward_declare Noreturn abort();
-#define assert(condition)              \
+#define assert_printless(condition)    \
   if (expect_unlikely(!(condition))) { \
     abort();                           \
   }
+#define assert(condition) assert_impl(condition, " " __FILE__ ":" STR(__LINE__) " assert(" #condition ")\n")
+#define assert2(condition, msg_cstr) assert_impl(condition, " " __FILE__ ":" STR(__LINE__) " " msg_cstr "\n")
+#define assert_impl(condition, msg_cstr) ({ \
+  if (expect_unlikely(!(condition))) {      \
+    fprint(STDERR, string(msg_cstr));       \
+    abort();                                \
+  }                                         \
+})
 #define ASSERT_MUlTIPLE_OF(a, b) ASSERT(a % b == 0)
 #define DISTINCT(type, name) \
   typedef type name
