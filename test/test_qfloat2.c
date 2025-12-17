@@ -30,6 +30,7 @@ void main_multicore(Thread t) {
         {string("1"), 1},
         {string("9223372036854775807"), 9223372036854775807},
         {string("-9223372036854775808"), (int64_t)9223372036854775808ULL},
+        {string("-9223372036854775808"), -(int64_t)9223372036854775807ULL - 1},
     };
     for (intptr i = 0; i < countof(tests); i++) {
       Test test = tests[i];
