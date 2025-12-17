@@ -117,7 +117,6 @@ void wake_all_on_address(u32* address) {
   assert(false);
 #endif
 }
-
 /* wait until all threads enter this barrier() and exit the previous barrier() */
 void barrier(Thread t) {
   u32 threads_start = global_threads->thread_infos[t].threads_start;
@@ -167,20 +166,23 @@ void barrier_scatter_impl(Thread t, u64* value) {
   *value = *shared_value;
   barrier(t); /* NOTE: make sure all threads have read the data */
 }
+/* gather values from all threads in the current group into a all threads */
 #define barrier_gather(t, value) barrier_gather_impl(t, u64(value))
 ThreadInfo* barrier_gather_impl(Thread t, u64 value) {
   global_threads->values[t] = value;
   barrier(t); /* NOTE: make sure all threads have written their data */
   return global_threads->thread_infos;
 }
-// split threads
+
+// split/join threads
 bool barrier_split_threads(Thread t, u32 n) {
-  // barrier() + modify threads
+  // inline barrier() + modify threads
   u32 threads_start = global_threads->thread_infos[t].threads_start;
   u32 threads_end = global_threads->thread_infos[t].threads_end;
   ThreadInfo* shared_data = &global_threads->thread_infos[threads_start];
   u32 thread_count = threads_end - threads_start;
   Thread threads_split = threads_start + n;
+  assert(n <= thread_count);
 
   bool is_last_counter = atomic_add_fetch(&shared_data->is_last_counter, 1);
   if (expect_likely(is_last_counter < thread_count)) {
@@ -210,6 +212,7 @@ bool barrier_split_threads(Thread t, u32 n) {
   return t < threads_split;
 }
 void barrier_join_threads(Thread t, Thread threads_start, Thread threads_end) {
+  // inline barrier() + modify threads
   assert(t >= threads_start && t < threads_end);
   ThreadInfo* shared_data = &global_threads->thread_infos[threads_start];
   u32 thread_count = threads_end - threads_start;
@@ -219,6 +222,7 @@ void barrier_join_threads(Thread t, Thread threads_start, Thread threads_end) {
     wait_on_address(&shared_data->join_barrier, shared_data->join_barrier);
     atomic_fetch_add(&shared_data->join_counter, 1);
   } else {
+    // modify threads
     for (Thread i = threads_start; i < threads_end; i++) {
       ThreadInfo* thread_data = &global_threads->thread_infos[i];
       thread_data->threads_start = threads_start;
@@ -228,6 +232,7 @@ void barrier_join_threads(Thread t, Thread threads_start, Thread threads_end) {
     shared_data->was_first_thread = threads_start;
     shared_data->join_counter = u32(-thread_count + 1);
     shared_data->join_barrier += 1;
+    // -modify threads
     wake_all_on_address(&shared_data->join_barrier);
   }
 }
