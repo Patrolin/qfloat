@@ -132,7 +132,7 @@ void barrier(Thread t) {
   u32 barrier_counter = atomic_add_fetch(&shared_data->barrier_counter, 1);
   if (barrier_counter != barrier_stop) {
     /* NOTE: seems like windows has a bug where WaitOnAddress() has a tiny chance to wake up spuriously,
-      though we need to do this anyway for linux */
+      though we need to do this anyway for futex() on linux */
     while (atomic_load(&shared_data->barrier) == barrier) {
       wait_on_address(&shared_data->barrier, barrier);
     }
