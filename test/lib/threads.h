@@ -118,23 +118,27 @@ void wake_all_on_address(u32* address) {
 #endif
 }
 
+/* wait until all threads enter this barrier() and exit the previous barrier() */
 void barrier(Thread t) {
   u32 threads_start = global_threads->thread_infos[t].threads_start;
   u32 threads_end = global_threads->thread_infos[t].threads_end;
   ThreadInfo* shared_data = &global_threads->thread_infos[threads_start];
   u32 thread_count = threads_end - threads_start;
 
-  bool not_last = atomic_add_fetch(&shared_data->is_last_counter, 1) % thread_count != 0;
-  if (expect_likely(not_last)) {
+  u32 is_last_counter = atomic_add_fetch(&shared_data->is_last_counter, 1);
+  if (expect_likely(is_last_counter < thread_count)) {
     wait_on_address(&shared_data->barrier, shared_data->barrier);
+    atomic_fetch_add(&shared_data->is_last_counter, 1);
   } else {
-    /* NOTE: reset counters in case we have a non-power-of-two number of threads */
+    /* NOTE: reset counter in case we have a non-power-of-two number of threads */
     shared_data->is_first_counter = 0;
-    shared_data->is_last_counter = 0;
+    /* NOTE: i'm not sure why, but this prevents a race condition by waiting until all threads have exited the previous barrier */
+    shared_data->is_last_counter = u32(-thread_count + 1);
     shared_data->barrier += 1;
     wake_all_on_address(&shared_data->barrier);
   }
 }
+
 // single-core
 /* return true on the first thread that gets here, and false on the rest */
 bool single_core(Thread t) {
@@ -143,8 +147,7 @@ bool single_core(Thread t) {
   ThreadInfo* shared_data = &global_threads->thread_infos[threads_start];
   u32 thread_count = threads_end - threads_start;
 
-  u32 prev_i = atomic_fetch_add(&shared_data->is_first_counter, 1);
-  bool is_first = prev_i % thread_count == 0;
+  bool is_first = atomic_fetch_add(&shared_data->is_first_counter, 1) == 0;
   if (expect_small(is_first)) {
     shared_data->was_first_thread = t;
   }
@@ -179,9 +182,12 @@ bool barrier_split_threads(Thread t, u32 n) {
   u32 thread_count = threads_end - threads_start;
   Thread threads_split = threads_start + n;
 
-  bool not_last = atomic_add_fetch(&shared_data->is_last_counter, 1) % thread_count != 0;
-  if (expect_likely(not_last)) {
+  bool is_last_counter = atomic_add_fetch(&shared_data->is_last_counter, 1);
+  if (expect_likely(is_last_counter < thread_count)) {
     wait_on_address(&shared_data->barrier, shared_data->barrier);
+    threads_start = global_threads->thread_infos[t].threads_start;
+    shared_data = &global_threads->thread_infos[threads_start];
+    atomic_fetch_add(&shared_data->is_last_counter, 1);
   } else {
     // modify threads
     for (Thread i = threads_start; i < threads_end; i++) {
@@ -194,9 +200,9 @@ bool barrier_split_threads(Thread t, u32 n) {
     split_data->was_first_thread = threads_split;
     /* NOTE: reset counters in case we have a non-power-of-two number of threads */
     shared_data->is_first_counter = 0;
-    shared_data->is_last_counter = 0;
+    shared_data->is_last_counter = u32(-threads_split + 1);
     split_data->is_first_counter = 0;
-    split_data->is_last_counter = 0;
+    split_data->is_last_counter = u32(threads_split - thread_count + 1);
     // -modify threads
     shared_data->barrier += 1;
     wake_all_on_address(&shared_data->barrier);
@@ -204,20 +210,23 @@ bool barrier_split_threads(Thread t, u32 n) {
   return t < threads_split;
 }
 void barrier_join_threads(Thread t, Thread threads_start, Thread threads_end) {
+  assert(t >= threads_start && t < threads_end);
   ThreadInfo* shared_data = &global_threads->thread_infos[threads_start];
   u32 thread_count = threads_end - threads_start;
+  /* NOTE: `thread_count > prev_thread_count`, so we need a separate barrier */
   u32 join_counter = atomic_add_fetch(&shared_data->join_counter, 1);
-  if (expect_likely(join_counter % thread_count != 0)) {
+  if (expect_likely(join_counter < thread_count)) {
     wait_on_address(&shared_data->join_barrier, shared_data->join_barrier);
+    atomic_fetch_add(&shared_data->join_counter, 1);
   } else {
     for (Thread i = threads_start; i < threads_end; i++) {
       ThreadInfo* thread_data = &global_threads->thread_infos[i];
       thread_data->threads_start = threads_start;
       thread_data->threads_end = threads_end;
     }
+    shared_data->is_first_counter = 0;
     shared_data->was_first_thread = threads_start;
-    /* NOTE: reset counter in case we have a non-power-of-two number of threads */
-    shared_data->join_counter = 0;
+    shared_data->join_counter = u32(-thread_count + 1);
     shared_data->join_barrier += 1;
     wake_all_on_address(&shared_data->join_barrier);
   }
