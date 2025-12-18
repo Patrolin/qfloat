@@ -29,7 +29,9 @@ QF_ASSERT(sizeof(char) == 1);
 #endif
 /* NOTE: When there aren't any `break` or `return` statements, jump over the if block. */
 #define qf_small(condition) qf_likely(condition)
-/* NOTE: When there are `break` or `return` statements, let the compiler decide. */
+/* NOTE: When there are `break` or `return` statements, let the compiler decide.
+  X64 has a variable instruction size, so qf_likely() produces more instructions, but less bytecode,
+  on other architectures, qf_likely() probably produces more bytecode. */
 #define qf_exit(condition) (condition)
 
 #define qf_min(a, b) ((a) < (b) ? (a) : (b))
