@@ -120,7 +120,7 @@ void wake_all_on_address(u32* address) {
   assert(false);
 #endif
 }
-/* wait until all threads enter this barrier() and exit the previous barrier() */
+/* wait until all threads enter this barrier() */
 void barrier(Thread t) {
   u32 threads_start = global_threads->thread_infos[t].threads_start;
   u32 threads_end = global_threads->thread_infos[t].threads_end;
