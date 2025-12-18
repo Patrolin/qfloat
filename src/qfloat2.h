@@ -144,7 +144,7 @@ uint64_t qf_nonnull(1, 4) qf_parse_u64_hex(const char *str, intptr_t str_size, i
   *end = i;
   return result;
 }
-uint64_t qf_nonnull(1, 4, 5) qf_parse_f64_significand(const char *str, intptr_t str_size, intptr_t start, intptr_t *end, intptr_t *exponent_offset_ptr) {
+uint64_t qf_nonnull(1, 4, 5) qf_parse_f64_significand(const char *str, intptr_t str_size, intptr_t start, intptr_t *end, intptr_t *exponent_base10_ptr) {
   uint64_t result = 0;
   intptr_t i = start;
   // integer
@@ -154,33 +154,31 @@ uint64_t qf_nonnull(1, 4, 5) qf_parse_f64_significand(const char *str, intptr_t 
   }
   while (i < str_size && non_leading_zero_digits < QF_SIGNIFICAND_DIGITS_f64) {
     uint8_t digit = str[i] - '0';
-    uint64_t new_result = result * 10 + digit;
     if (qf_exit(digit >= 10)) break;
-    result = new_result;
+    result = result * 10 + digit;
     non_leading_zero_digits++;
     i++;
   }
   // fraction
-  intptr_t exponent_offset = 0;
+  intptr_t exponent_base10 = 0;
   if (qf_small(i < str_size && str[i] == '.')) {
     i++;
     if (qf_small(result == 0)) {
       while (i < str_size && str[i] == '0') {
-        exponent_offset--;
+        exponent_base10--;
         i++;
       }
     }
     while (i < str_size && non_leading_zero_digits < QF_SIGNIFICAND_DIGITS_f64) {
       uint8_t digit = str[i] - '0';
-      uint64_t new_result = result * 10 + digit;
       if (qf_exit(digit >= 10)) break;
-      result = new_result;
+      result = result * 10 + digit;
       non_leading_zero_digits++;
-      exponent_offset--;
+      exponent_base10--;
       i++;
     }
   }
   *end = i;
-  *exponent_offset_ptr = exponent_offset;
+  *exponent_base10_ptr = exponent_base10;
   return result;
 }

@@ -59,4 +59,24 @@ void main_multicore(Thread t) {
     }
   }
   test_summary(t, group);
+  // qf_parse_f64_significand()
+  if (test_group(t, &group, string("qf_parse_f64_significand()"), 1)) {
+    TEST(string, u64);
+    Test tests[] = {
+        {string("0"), 0},
+        {string(".0"), 0},
+        {string("0."), 0},
+        {string("0.0"), 0},
+        {string("654321"), 654321},
+        {string("123456789.01234567"), 12345678901234567},
+    };
+    for (intptr i = 0; i < countof(tests); i++) {
+      Test test = tests[i];
+      intptr end;
+      intptr exponent_base10;
+      u64 parsed = qf_parse_f64_significand(test.in.ptr, (intptr)test.in.size, 0, &end, &exponent_base10);
+      check(t, group, parsed == test.out, u64, parsed);
+    }
+  }
+  test_summary(t, group);
 }
