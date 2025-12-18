@@ -1,4 +1,5 @@
 #pragma once
+#include "definitions.h"
 #include "fmt.h" /* IWYU pragma: keep */
 #include "os.h"
 
@@ -51,26 +52,8 @@ void page_free(intptr ptr) {
 #endif
 }
 
-// locks
-DISTINCT(bool, Lock);
-bool get_lock_or_false(Lock* lock) {
-  Lock expected = false;
-  return atomic_compare_exchange_weak(lock, &expected, true);
-}
-void get_lock(Lock* lock) {
-  Lock expected = false;
-  while (!expected) {
-    expected = atomic_compare_exchange_weak(lock, &expected, true);
-  }
-}
-#define get_lock_assert_single_threaded(lock) assert(get_lock_or_false(lock))
-void release_lock(Lock* lock) {
-  atomic_store(lock, false);
-}
-
 // arena
 typedef struct {
-  Lock lock;
   intptr next;
   intptr end;
 } ArenaAllocator;
@@ -81,28 +64,27 @@ ArenaAllocator* arena_allocator(Bytes buffer) {
   return arena;
 }
 
-intptr arena_alloc_impl(ArenaAllocator* arena, Size size, intptr align_mask) {
-  get_lock(&arena->lock);
-  intptr ptr = (arena->next + align_mask) & ~align_mask;
-  intptr next = ptr + intptr(size);
-  intptr end = arena->end;
-  arena->next = next;
-  release_lock(&arena->lock);
-
-  assert(next <= end);
-  zero((byte*)ptr, size);
-  return ptr;
-}
 #define arena_alloc(arena, t) ((t*)arena_alloc_impl(arena, sizeof(t), alignof(t) - 1))
 #define arena_alloc_flexible(arena, t1, t2, count) ((t1*)arena_alloc_impl(arena, sizeof(t1) + sizeof(t2) * count, alignof(t1) - 1))
-#define arena_alloc_count(arena, t, count) ({                     \
+#define arena_alloc_array(arena, t, count) ({                     \
   ASSERT_MUlTIPLE_OF(sizeof(t), alignof(t));                      \
   (t*)arena_alloc_impl(arena, sizeof(t) * count, alignof(t) - 1); \
 })
-
+intptr arena_alloc_impl(ArenaAllocator* arena, Size size, intptr align_mask) {
+  intptr current = atomic_load(&arena->next);
+  intptr end = arena->end;
+  while (true) {
+    intptr ptr = (current + align_mask) & ~align_mask;
+    intptr next = ptr + intptr(size);
+    assert(next <= end);
+    if (atomic_compare_exchange(&arena->next, &current, next)) {
+      memset((byte*)ptr, 0, size);
+      return ptr;
+    };
+  }
+}
 void arena_reset(ArenaAllocator* arena, intptr next) {
-  get_lock_assert_single_threaded(&arena->lock);
-  assert(next >= intptr(arena) && next <= arena->next);
-  arena->next = next;
-  release_lock(&arena->lock);
+  /* NOTE: reset and assert single-threaded */
+  intptr current = atomic_load(&arena->next);
+  assert(atomic_compare_exchange(&arena->next, &current, next));
 }

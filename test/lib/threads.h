@@ -65,7 +65,7 @@ void start_threads() {
   // start threads
   global_threads = arena_alloc_flexible(global_arena, Threads, ThreadInfo, logical_core_count);
   assert(global_threads != 0);
-  u64* values = arena_alloc_count(global_arena, u64, logical_core_count);
+  u64* values = arena_alloc_array(global_arena, u64, logical_core_count);
   global_threads->logical_core_count = logical_core_count;
   global_threads->values = values;
   for (Thread t = 0; t < logical_core_count; t++) {

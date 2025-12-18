@@ -12,13 +12,14 @@ void fprint(FileHandle file, string str) {
   DWORD bytes_written;
   DWORD chars_to_write = downcast(Size, str.size, DWORD);
   WriteFile(file, str.ptr, chars_to_write, &bytes_written, 0);
-  assert_printless(bytes_written == str.size);
 #elif OS_LINUX
   intptr bytes_written = write(file, str.ptr, str.size);
-  assert_printless(bytes_written == str.size);
 #else
-  assert_printless(false);
+  abort();
 #endif
+  if (expect_unlikely(bytes_written != str.size)) {
+    abort();
+  }
 }
 
 // sprint()

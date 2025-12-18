@@ -1,9 +1,14 @@
 #pragma once
+// IWYU pragma: begin_exports
 #include <stdbool.h>
-#include <stdint.h> /* IWYU pragma: keep */
+#include <stdint.h>
+// IWYU pragma: end_exports
 
 // Size
 #define ASSERT(condition) _Static_assert((condition), #condition)
+#define ASSERT_MUlTIPLE_OF(a, b) ASSERT(a % b == 0)
+#define DISTINCT(type, name) \
+  typedef type name
 
 typedef char byte;
 #define byte(x) ((byte)(x))
@@ -152,11 +157,47 @@ ASSERT(OS_HUGE_PAGE_SIZE == 2 * MebiByte);
    whereas expect_unlikely() puts the block far away, and may duplicate code on both paths.
    Should only be used if there aren't any `break` or `return` statements in the block. */
 #define expect_small(condition) expect_likely(condition)
-forward_declare Noreturn abort();
-#define assert_printless(condition)    \
-  if (expect_unlikely(!(condition))) { \
-    abort();                           \
+
+// utils
+typedef struct {
+  byte* ptr;
+  Size size;
+} Bytes;
+/* NOTE: utf8 string */
+typedef struct {
+  readonly byte* ptr;
+  Size size;
+} string;
+/* NOTE: we take the pointer of the cstring directly to avoid a memcpy() */
+#define string(const_cstr) ((string){const_cstr, sizeof(const_cstr) - 1})
+#define str_slice(str, i, j) ((string){&str.ptr[i], i > j ? 0 : Size(j) - Size(i)})
+bool str_equals(string a, string b) {
+  if (expect_unlikely(a.size != b.size)) {
+    return false;
   }
+  for (intptr i = 0; i < a.size; i++) {
+    if (expect_unlikely(a.ptr[i] != b.ptr[i])) {
+      return false;
+    }
+  }
+  return true;
+}
+
+forward_declare Noreturn abort();
+void fprint(uintptr file, string str);
+#if OS_WINDOWS
+typedef enum : uintptr {
+  STDIN = -10,
+  STDOUT = -11,
+  STDERR = -12,
+} ConsoleHandleEnum;
+#elif OS_LINUX
+typedef enum : uintptr {
+  STDIN = 0,
+  STDOUT = 1,
+  STDERR = 2,
+} ConsoleHandleEnum;
+#endif
 #define assert(condition) assert_impl(condition, " " __FILE__ ":" STR(__LINE__) " assert(" #condition ")\n")
 #define assert2(condition, msg_cstr) assert_impl(condition, " " __FILE__ ":" STR(__LINE__) " " msg_cstr "\n")
 #define assert_impl(condition, msg_cstr) ({ \
@@ -165,30 +206,30 @@ forward_declare Noreturn abort();
     abort();                                \
   }                                         \
 })
-#define ASSERT_MUlTIPLE_OF(a, b) ASSERT(a % b == 0)
-#define DISTINCT(type, name) \
-  typedef type name
 
-// crt
-always_inline_ void zero(byte* ptr, Size size) {
-  for (intptr i = 0; i < size; i++) {
-    ptr[i] = 0;
-  }
-}
-always_inline_ void copy(readonly byte* ptr, Size size, byte* dest) {
-  for (intptr i = 0; i < size; i++) {
-    dest[i] = ptr[i];
-  }
-}
+// CRT
 #if HAS_CRT
+  // IWYU pragma: begin_exports
   #include <math.h>
+  #include <string.h>
+// IWYU pragma: end_exports
 #else
-extern void* memset(void* ptr, int x, Size size) {
-  assert(x == 0);
-  zero(ptr, size);
+extern void* memcpy(byte* restrict dest, const byte* restrict src, Size size) {
+  byte* dest_end = dest + size;
+  while (dest < dest_end) {
+    *(dest++) = *(src++);
+  }
+  return dest;
+}
+extern void* memset(byte* restrict ptr, int x, Size size) {
+  assert(x <= 255);
+  byte x_byte = (byte)x;
+  byte* ptr_end = ptr + size;
+  while (ptr < ptr_end) {
+    *(byte*)(ptr++) = x_byte;
+  }
   return ptr;
 }
-  // TODO: implement memcpy()
   #define fma_f64(a, b, c) fma_f64_impl(__COUNTER__, a, b, c)
 #endif
 #if ARCH_X64
@@ -301,35 +342,6 @@ CINT _fltused = 0;
 #else
 // ASSERT(false);
 #endif
-
-// slice
-/*typedef struct {
-  void* ptr;
-  intptr count;
-} Slice;*/
-typedef struct {
-  byte* ptr;
-  Size size;
-} Bytes;
-/* NOTE: utf8 string */
-typedef struct {
-  readonly byte* ptr;
-  Size size;
-} string;
-/* NOTE: we take the pointer of the cstring directly to avoid a memcpy() */
-#define string(const_cstr) ((string){const_cstr, sizeof(const_cstr) - 1})
-#define str_slice(str, i, j) ((string){&str.ptr[i], i > j ? 0 : Size(j) - Size(i)})
-bool str_equals(string a, string b) {
-  if (expect_unlikely(a.size != b.size)) {
-    return false;
-  }
-  for (intptr i = 0; i < a.size; i++) {
-    if (expect_unlikely(a.ptr[i] != b.ptr[i])) {
-      return false;
-    }
-  }
-  return true;
-}
 
 // atomics: https://gcc.gnu.org/onlinedocs/gcc/_005f_005fatomic-Builtins.html
 #define volatile_store(address, value) __atomic_store_n(address, value, __ATOMIC_RELAXED)

@@ -36,11 +36,6 @@ ASSERT(false);
 
 // process
 #if OS_WINDOWS
-typedef enum : FileHandle {
-  STDIN = -10,
-  STDOUT = -11,
-  STDERR = -12,
-} ConsoleHandleEnum;
 typedef enum : DWORD {
   CP_UTF8 = 65001,
 } CodePage;
@@ -51,11 +46,6 @@ foreign BOOL WriteFile(FileHandle file, readonly byte* buffer, DWORD buffer_size
 foreign void ExitProcess(CUINT exit_code);
 
 #elif OS_LINUX
-typedef enum : FileHandle {
-  STDIN = 0,
-  STDOUT = 1,
-  STDERR = 2,
-} ConsoleHandleEnum;
 intptr write(FileHandle file, readonly byte* buffer, Size buffer_size) {
   return syscall3(SYS_write, (uintptr)file, (uintptr)buffer, buffer_size);
 }
