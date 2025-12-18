@@ -18,7 +18,7 @@ void main_multicore(Thread t) {
       Test test = tests[i];
       intptr end;
       u64 parsed = qf_parse_u64_decimal(test.in.ptr, (intptr)test.in.size, 0, &end);
-      check(t, group, parsed == test.out, hex, parsed);
+      check(t, group, parsed == test.out, u64, parsed);
     }
   }
   test_summary(t, group);
@@ -36,7 +36,7 @@ void main_multicore(Thread t) {
       Test test = tests[i];
       intptr end;
       i64 parsed = qf_parse_i64_decimal(test.in.ptr, (intptr)test.in.size, 0, &end);
-      check(t, group, parsed == test.out, hex, parsed);
+      check(t, group, parsed == test.out, i64, parsed);
     }
   }
   test_summary(t, group);
@@ -55,7 +55,7 @@ void main_multicore(Thread t) {
       Test test = tests[i];
       intptr end;
       u64 parsed = qf_parse_u64_hex(test.in.ptr, (intptr)test.in.size, 0, &end);
-      check(t, group, parsed == test.out, hex, parsed);
+      check(t, group, parsed == test.out, u64, parsed);
     }
   }
   test_summary(t, group);

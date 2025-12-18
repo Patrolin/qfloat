@@ -9,6 +9,11 @@
 #else
   #define QF_ASSERT(condition) _Static_assert(condition, #condition)
 #endif
+
+/* NOTE: QF_SIGNIFICAND_DIGITS_xx = Math.ceil(EXPLICIT_MANTISSA_BITS_xx * Math.log10(2)) */
+#define QF_SIGNIFICAND_DIGITS_f64 17
+#define QF_SIGNIFICAND_DIGITS_f32 7
+#define QF_SIGNIFICAND_DIGITS_f16 4
 QF_ASSERT(sizeof(double) == 8);
 QF_ASSERT(sizeof(float) == 4);
 QF_ASSERT(sizeof(char) == 1);
@@ -35,43 +40,30 @@ QF_ASSERT(sizeof(char) == 1);
 #define qf_exit(condition) (condition)
 
 #define qf_min(a, b) ((a) < (b) ? (a) : (b))
+/* NOTE: overflows on the 65th bit */
 static bool qf_nonnull(3) qf_add_overflow_u64(uint64_t a, uint64_t b, uint64_t *result_ptr) {
-  /* NOTE: overflows on the 65th bit */
 #if defined(__clang__) || defined(__GNUC__)
-  uint64_t result;
-  bool overflow = __builtin_add_overflow(a, b, &result);
+  return __builtin_add_overflow(a, b, result_ptr);
 #else
   uint64_t result = a + b;
-  bool overflow = result < a; /* NOTE: only works for adding/subtracting unsigned integers */
+  *result_ptr = result;
+  return result < a; /* NOTE: only works for adding/subtracting unsigned integers */
 #endif
-  if (qf_likely(!overflow)) {
-    *result_ptr = result;
-  }
-  return overflow;
 }
+/* NOTE: overflows on the 64th bit */
 static bool qf_nonnull(3) qf_add_overflow_i64(int64_t a, int64_t b, int64_t *result_ptr) {
-  /* NOTE: overflows on the 64th bit */
 #if defined(__clang__) || defined(__GNUC__)
-  int64_t result;
-  bool overflow = __builtin_add_overflow(a, b, &result);
+  return __builtin_add_overflow(a, b, result_ptr);
 #else
   int64_t result = a + b;
-  bool overflow = ((a ^ result) & (b ^ result)) < 0;
+  *result_ptr = result;
+  return ((a ^ result) & (b ^ result)) < 0;
 #endif
-  if (qf_likely(!overflow)) {
-    *result_ptr = result;
-  }
-  return overflow;
 }
 // bool qf_nonnull(3) qf_sub_overflow_i64(int64_t a, int64_t b, int64_t *result_ptr) {
 // #if defined(__clang__) || defined(__GNUC__)
 //   /* NOTE: clang/gcc emit `neg; add` instead of `sub` unless we use the intrinsic... */
-//   int64_t result;
-//   bool overflow = __builtin_sub_overflow(a, b, &result);
-//   if (qf_likely(!overflow)) {
-//     *result_ptr = result;
-//   }
-//   return overflow;
+//   return __builtin_sub_overflow(a, b, result_ptr);
 // #else
 //   /* NOTE: MSVC doesn't have a subtract overflow intrinsic, but it inlines and optimizes to a `sub` instruction */
 //   return qf_add_overflow_i64(a, -b, result_ptr);
@@ -79,44 +71,36 @@ static bool qf_nonnull(3) qf_add_overflow_i64(int64_t a, int64_t b, int64_t *res
 // }
 static bool qf_nonnull(3) qf_mul_overflow_u64(uint64_t a, uint64_t b, uint64_t *result_ptr) {
 #if defined(__clang__) || defined(__GNUC__)
-  uint64_t result;
-  bool overflow = __builtin_mul_overflow(a, b, &result);
+  return __builtin_mul_overflow(a, b, result_ptr);
 #else
   uint64_t result_high;
   uint64_t result = _umul128(a, b, &result_high);
-  bool overflow = result_high != 0;
+  *result_ptr = result;
+  return result_high != 0;
 #endif
-  if (qf_likely(!overflow)) {
-    *result_ptr = result;
-  }
-  return overflow;
 }
 static bool qf_nonnull(3) qf_mul_overflow_i64(int64_t a, int64_t b, int64_t *result_ptr) {
 #if defined(__clang__) || defined(__GNUC__)
-  int64_t result;
-  bool overflow = __builtin_mul_overflow(a, b, &result);
+  return __builtin_mul_overflow(a, b, result_ptr);
 #else
   int64_t result_high;
   int64_t result = _mul128(a, b, &result_high);
-  bool overflow = result_high != 0;
+  *result_ptr = result;
+  return result_high != 0;
 #endif
-  if (qf_likely(!overflow)) {
-    *result_ptr = result;
-  }
-  return overflow;
 }
-
-#define QF_BASE10_DIGITS_f64 17
 
 // parsing
 uint64_t qf_nonnull(1, 4) qf_parse_u64_decimal(const char *str, intptr_t str_size, intptr_t start, intptr_t *end) {
-  uint64_t result = 0;
   intptr_t i = start;
+  uint64_t result = 0;
   while (i < str_size) {
     uint8_t digit = str[i] - '0';
-    bool did_overflow = qf_mul_overflow_u64(result, 10, &result);
-    did_overflow |= qf_add_overflow_u64(result, (uint64_t)digit, &result);
+    uint64_t new_result;
+    bool did_overflow = qf_mul_overflow_u64(result, 10, &new_result);
+    did_overflow |= qf_add_overflow_u64(new_result, digit, &new_result);
     if (qf_exit(digit >= 10 || did_overflow)) break;
+    result = new_result;
     i++;
   }
   *end = i;
@@ -129,11 +113,13 @@ int64_t qf_nonnull(1, 4) qf_parse_i64_decimal(const char *str, intptr_t str_size
   // value
   int64_t result = 0;
   while (i < str_size) {
-    int64_t digit = (int64_t)(str[i] - '0');
-    bool did_overflow = qf_mul_overflow_i64(result, 10, &result);
+    int8_t digit = str[i] - '0';
     digit = negative ? -digit : digit;
-    did_overflow |= qf_add_overflow_i64(result, digit, &result);
+    int64_t new_result;
+    bool did_overflow = qf_mul_overflow_i64(result, 10, &new_result);
+    did_overflow |= qf_add_overflow_i64(new_result, digit, &new_result);
     if (qf_exit(digit >= 10 || did_overflow)) break;
+    result = new_result;
     i++;
   }
   *end = i;
@@ -148,9 +134,11 @@ uint64_t qf_nonnull(1, 4) qf_parse_u64_hex(const char *str, intptr_t str_size, i
     uint8_t decimal = (uint8_t)(c - '0');
     uint8_t hex = qf_min((uint8_t)(c - 'A'), (uint8_t)(c - 'a'));
     digit = decimal <= 9 ? decimal : hex + 10;
-    bool did_overflow = qf_mul_overflow_u64(result, 16, &result);
-    did_overflow |= qf_add_overflow_u64(result, digit, &result);
+    uint64_t new_result;
+    bool did_overflow = qf_mul_overflow_u64(result, 16, &new_result);
+    did_overflow |= qf_add_overflow_u64(new_result, digit, &new_result);
     if (qf_exit(digit >= 16 || did_overflow)) break;
+    result = new_result;
     i++;
   }
   *end = i;
@@ -164,7 +152,7 @@ uint64_t qf_nonnull(1, 4, 5) qf_parse_f64_significand(const char *str, intptr_t 
   while (i < str_size && str[i] == '0') {
     i++;
   }
-  while (i < str_size && non_leading_zero_digits < QF_BASE10_DIGITS_f64) {
+  while (i < str_size && non_leading_zero_digits < QF_SIGNIFICAND_DIGITS_f64) {
     uint8_t digit = str[i] - '0';
     uint64_t new_result = result * 10 + digit;
     if (qf_exit(digit >= 10)) break;
@@ -182,7 +170,7 @@ uint64_t qf_nonnull(1, 4, 5) qf_parse_f64_significand(const char *str, intptr_t 
         i++;
       }
     }
-    while (i < str_size && non_leading_zero_digits < QF_BASE10_DIGITS_f64) {
+    while (i < str_size && non_leading_zero_digits < QF_SIGNIFICAND_DIGITS_f64) {
       uint8_t digit = str[i] - '0';
       uint64_t new_result = result * 10 + digit;
       if (qf_exit(digit >= 10)) break;
