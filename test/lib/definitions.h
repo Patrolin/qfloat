@@ -152,11 +152,10 @@ ASSERT(OS_HUGE_PAGE_SIZE == 2 * MebiByte);
 #define expect_likely(condition) __builtin_expect(condition, true)
 /* generate code that takes shorter when the condition is false, but longer when the condition is true */
 #define expect_unlikely(condition) __builtin_expect(condition, false)
-/* In the case of `if (expect_small(condition)) {x += y}`,
-   expect_likely() puts the block right after and skips over it via a jump
-   whereas expect_unlikely() puts the block far away, and may duplicate code on both paths.
-   Should only be used if there aren't any `break` or `return` statements in the block. */
+/* NOTE: When there aren't any `break` or `return` statements, jump over the if block. */
 #define expect_small(condition) expect_likely(condition)
+/* NOTE: When there are `break` or `return` statements, let the compiler decide. */
+#define expect_exit(condition) (condition)
 
 // utils
 typedef struct {
@@ -214,14 +213,14 @@ typedef enum : uintptr {
   #include <string.h>
 // IWYU pragma: end_exports
 #else
-extern void* memcpy(byte* restrict dest, const byte* restrict src, Size size) {
+extern void* memcpy(byte* dest, const byte* src, Size size) {
   byte* dest_end = dest + size;
   while (dest < dest_end) {
     *(dest++) = *(src++);
   }
   return dest;
 }
-extern void* memset(byte* restrict ptr, int x, Size size) {
+extern void* memset(byte* ptr, int x, Size size) {
   assert(x <= 255);
   byte x_byte = (byte)x;
   byte* ptr_end = ptr + size;

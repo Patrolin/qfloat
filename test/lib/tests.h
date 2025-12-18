@@ -20,7 +20,7 @@ typedef struct {
   u64 fail_count;
 } TestGroup;
 bool NONNULL(2) test_group(Thread t, TestGroup** group, string name, Thread thread_count) {
-  if (t == 0) {
+  if (expect_small(t == 0)) {
     *group = arena_alloc(global_arena, TestGroup);
     **group = (TestGroup){.name = name};
   }
@@ -29,7 +29,7 @@ bool NONNULL(2) test_group(Thread t, TestGroup** group, string name, Thread thre
 }
 void test_summary(Thread t, TestGroup* group) {
   barrier(t); /* NOTE: wait for writes */
-  if (t == 0) {
+  if (expect_small(t == 0)) {
     u64 test_count = group->test_count;
     u64 pass_count = test_count - group->fail_count;
     printf3(string(DELETE_LINE "   %: %/% tests passed\n"), string, group->name, u64, pass_count, u64, test_count);

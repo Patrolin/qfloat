@@ -22,7 +22,7 @@ void main_multicore(Thread t) {
 #endif
     while (true) {
       current_run = atomic_fetch_add(runs_ptr, 1);
-      if (expect_small(current_run >= max_runs)) break;
+      if (expect_exit(current_run >= max_runs)) break;
       u64 value = random_u64(current_run);
 #ifndef NDEBUG
       printfln1(string("\nv: %"), hex, value);

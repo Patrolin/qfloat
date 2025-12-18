@@ -77,7 +77,7 @@ intptr arena_alloc_impl(ArenaAllocator* arena, Size size, intptr align_mask) {
     intptr ptr = (current + align_mask) & ~align_mask;
     intptr next = ptr + intptr(size);
     assert(next <= end);
-    if (atomic_compare_exchange(&arena->next, &current, next)) {
+    if (expect_exit(atomic_compare_exchange(&arena->next, &current, next))) {
       memset((byte*)ptr, 0, size);
       return ptr;
     };

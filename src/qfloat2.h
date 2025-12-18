@@ -27,6 +27,10 @@ QF_ASSERT(sizeof(char) == 1);
   #define qf_unlikely(condition) (condition)
   #include <intrin.h> /* NOTE: required for overflow in MSVC */
 #endif
+/* NOTE: When there aren't any `break` or `return` statements, jump over the if block. */
+#define qf_small(condition) qf_likely(condition)
+/* NOTE: When there are `break` or `return` statements, let the compiler decide. */
+#define qf_exit(condition) (condition)
 #define qf_min(a, b) ((a < b) ? (a) : (b))
 
 bool qf_nonnull(3) qf_add_overflow_u64(uint64_t a, uint64_t b, uint64_t *result_ptr) {
@@ -102,7 +106,7 @@ bool qf_nonnull(3) qf_mul_overflow_i64(int64_t a, int64_t b, int64_t *result_ptr
 
 #define QF_BASE10_DIGITS_f64 17
 
-// parsing // TODO: test these
+// parsing
 uint64_t qf_nonnull(1, 4) qf_parse_u64_decimal(const char *str, intptr_t str_size, intptr_t start, intptr_t *end) {
   uint64_t result = 0;
   intptr_t i = start;
@@ -110,7 +114,7 @@ uint64_t qf_nonnull(1, 4) qf_parse_u64_decimal(const char *str, intptr_t str_siz
     uint8_t digit = str[i] - '0';
     bool did_overflow = qf_mul_overflow_u64(result, 10, &result);
     did_overflow |= qf_add_overflow_u64(result, (uint64_t)digit, &result);
-    if (digit >= 10 || did_overflow) break;
+    if (qf_exit(digit >= 10 || did_overflow)) break;
     i++;
   }
   *end = i;
@@ -127,7 +131,7 @@ int64_t qf_nonnull(1, 4) qf_parse_i64_decimal(const char *str, intptr_t str_size
     bool did_overflow = qf_mul_overflow_i64(result, 10, &result);
     digit = negative ? -digit : digit;
     did_overflow |= qf_add_overflow_i64(result, digit, &result);
-    if (digit >= 10 || did_overflow) break;
+    if (qf_exit(digit >= 10 || did_overflow)) break;
     i++;
   }
   *end = i;
@@ -139,20 +143,12 @@ uint64_t qf_nonnull(1, 4) qf_parse_u64_hex(const char *str, intptr_t str_size, i
   while (i < str_size) {
     uint64_t digit = 16;
     char c = str[i];
-    char decimal = c - '0';
-    if (decimal <= '9' - '0') {
-      digit = decimal;
-    } else {
-      char uppercase_hex = c - 'A';
-      char lowercase_hex = c - 'a';
-      char hex = qf_min(uppercase_hex, lowercase_hex);
-      if (hex <= 'F' - 'A') {
-        digit = hex + 10;
-      }
-    }
+    uint8_t decimal = (uint8_t)(c - '0');
+    uint8_t hex = qf_min((uint8_t)(c - 'A'), (uint8_t)(c - 'a'));
+    digit = decimal <= 9 ? decimal : hex + 10;
     bool did_overflow = qf_mul_overflow_u64(result, 16, &result);
     did_overflow |= qf_add_overflow_u64(result, digit, &result);
-    if (digit >= 16 || did_overflow) break;
+    if (qf_exit(digit >= 16 || did_overflow)) break;
     i++;
   }
   *end = i;
@@ -169,16 +165,16 @@ uint64_t qf_nonnull(1, 4, 5) qf_parse_f64_significand(const char *str, intptr_t 
   while (i < str_size && non_leading_zero_digits < QF_BASE10_DIGITS_f64) {
     uint8_t digit = str[i] - '0';
     uint64_t new_result = result * 10 + digit;
-    if (digit >= 10) break;
+    if (qf_exit(digit >= 10)) break;
     result = new_result;
     non_leading_zero_digits++;
     i++;
   }
   // fraction
   intptr_t exponent_offset = 0;
-  if (i < str_size && str[i] == '.') {
+  if (qf_small(i < str_size && str[i] == '.')) {
     i++;
-    if (result == 0) {
+    if (qf_small(result == 0)) {
       while (i < str_size && str[i] == '0') {
         exponent_offset--;
         i++;
@@ -187,7 +183,7 @@ uint64_t qf_nonnull(1, 4, 5) qf_parse_f64_significand(const char *str, intptr_t 
     while (i < str_size && non_leading_zero_digits < QF_BASE10_DIGITS_f64) {
       uint8_t digit = str[i] - '0';
       uint64_t new_result = result * 10 + digit;
-      if (digit >= 10) break;
+      if (qf_exit(digit >= 10)) break;
       result = new_result;
       non_leading_zero_digits++;
       exponent_offset--;
