@@ -31,9 +31,9 @@ QF_ASSERT(sizeof(char) == 1);
 #define qf_small(condition) qf_likely(condition)
 /* NOTE: When there are `break` or `return` statements, let the compiler decide. */
 #define qf_exit(condition) (condition)
-#define qf_min(a, b) ((a < b) ? (a) : (b))
 
-bool qf_nonnull(3) qf_add_overflow_u64(uint64_t a, uint64_t b, uint64_t *result_ptr) {
+#define qf_min(a, b) ((a) < (b) ? (a) : (b))
+static bool qf_nonnull(3) qf_add_overflow_u64(uint64_t a, uint64_t b, uint64_t *result_ptr) {
   /* NOTE: overflows on the 65th bit */
 #if defined(__clang__) || defined(__GNUC__)
   uint64_t result;
@@ -47,7 +47,7 @@ bool qf_nonnull(3) qf_add_overflow_u64(uint64_t a, uint64_t b, uint64_t *result_
   }
   return overflow;
 }
-bool qf_nonnull(3) qf_add_overflow_i64(int64_t a, int64_t b, int64_t *result_ptr) {
+static bool qf_nonnull(3) qf_add_overflow_i64(int64_t a, int64_t b, int64_t *result_ptr) {
   /* NOTE: overflows on the 64th bit */
 #if defined(__clang__) || defined(__GNUC__)
   int64_t result;
@@ -75,7 +75,7 @@ bool qf_nonnull(3) qf_add_overflow_i64(int64_t a, int64_t b, int64_t *result_ptr
 //   return qf_add_overflow_i64(a, -b, result_ptr);
 // #endif
 // }
-bool qf_nonnull(3) qf_mul_overflow_u64(uint64_t a, uint64_t b, uint64_t *result_ptr) {
+static bool qf_nonnull(3) qf_mul_overflow_u64(uint64_t a, uint64_t b, uint64_t *result_ptr) {
 #if defined(__clang__) || defined(__GNUC__)
   uint64_t result;
   bool overflow = __builtin_mul_overflow(a, b, &result);
@@ -89,7 +89,7 @@ bool qf_nonnull(3) qf_mul_overflow_u64(uint64_t a, uint64_t b, uint64_t *result_
   }
   return overflow;
 }
-bool qf_nonnull(3) qf_mul_overflow_i64(int64_t a, int64_t b, int64_t *result_ptr) {
+static bool qf_nonnull(3) qf_mul_overflow_i64(int64_t a, int64_t b, int64_t *result_ptr) {
 #if defined(__clang__) || defined(__GNUC__)
   int64_t result;
   bool overflow = __builtin_mul_overflow(a, b, &result);
