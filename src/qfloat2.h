@@ -4,7 +4,7 @@
 #include <stdbool.h>
 
 // common
-#if defined(__cplusplus)
+#if defined(__cplusplus) || (defined(_MSC_VER) && !defined(__clang__))
   #define QF_ASSERT(condition) static_assert(condition, #condition)
 #else
   #define QF_ASSERT(condition) _Static_assert(condition, #condition)
@@ -41,7 +41,7 @@ QF_ASSERT(sizeof(char) == 1);
 
 #define qf_min(a, b) ((a) < (b) ? (a) : (b))
 /* NOTE: overflows on the 65th bit */
-static bool qf_nonnull(3) qf_add_overflow_u64(uint64_t a, uint64_t b, uint64_t *result_ptr) {
+static bool qf_nonnull(3) qf_add_overflow_u64(uint64_t a, uint64_t b, uint64_t *restrict result_ptr) {
 #if defined(__clang__) || defined(__GNUC__)
   return __builtin_add_overflow(a, b, result_ptr);
 #else
@@ -51,7 +51,7 @@ static bool qf_nonnull(3) qf_add_overflow_u64(uint64_t a, uint64_t b, uint64_t *
 #endif
 }
 /* NOTE: overflows on the 64th bit */
-static bool qf_nonnull(3) qf_add_overflow_i64(int64_t a, int64_t b, int64_t *result_ptr) {
+static bool qf_nonnull(3) qf_add_overflow_i64(int64_t a, int64_t b, int64_t *restrict result_ptr) {
 #if defined(__clang__) || defined(__GNUC__)
   return __builtin_add_overflow(a, b, result_ptr);
 #else
@@ -60,7 +60,7 @@ static bool qf_nonnull(3) qf_add_overflow_i64(int64_t a, int64_t b, int64_t *res
   return ((a ^ result) & (b ^ result)) < 0;
 #endif
 }
-// bool qf_nonnull(3) qf_sub_overflow_i64(int64_t a, int64_t b, int64_t *result_ptr) {
+// bool qf_nonnull(3) qf_sub_overflow_i64(int64_t a, int64_t b, int64_t *restrict result_ptr) {
 // #if defined(__clang__) || defined(__GNUC__)
 //   /* NOTE: clang/gcc emit `neg; add` instead of `sub` unless we use the intrinsic... */
 //   return __builtin_sub_overflow(a, b, result_ptr);
@@ -69,7 +69,7 @@ static bool qf_nonnull(3) qf_add_overflow_i64(int64_t a, int64_t b, int64_t *res
 //   return qf_add_overflow_i64(a, -b, result_ptr);
 // #endif
 // }
-static bool qf_nonnull(3) qf_mul_overflow_u64(uint64_t a, uint64_t b, uint64_t *result_ptr) {
+static bool qf_nonnull(3) qf_mul_overflow_u64(uint64_t a, uint64_t b, uint64_t *restrict result_ptr) {
 #if defined(__clang__) || defined(__GNUC__)
   return __builtin_mul_overflow(a, b, result_ptr);
 #else
@@ -79,7 +79,7 @@ static bool qf_nonnull(3) qf_mul_overflow_u64(uint64_t a, uint64_t b, uint64_t *
   return result_high != 0;
 #endif
 }
-static bool qf_nonnull(3) qf_mul_overflow_i64(int64_t a, int64_t b, int64_t *result_ptr) {
+static bool qf_nonnull(3) qf_mul_overflow_i64(int64_t a, int64_t b, int64_t *restrict result_ptr) {
 #if defined(__clang__) || defined(__GNUC__)
   return __builtin_mul_overflow(a, b, result_ptr);
 #else
@@ -91,7 +91,7 @@ static bool qf_nonnull(3) qf_mul_overflow_i64(int64_t a, int64_t b, int64_t *res
 }
 
 // parsing
-uint64_t qf_nonnull(1, 4) qf_parse_u64_decimal(const char *str, intptr_t str_size, intptr_t start, intptr_t *end) {
+uint64_t qf_nonnull(1, 4) qf_parse_u64_decimal(const char *restrict str, intptr_t str_size, intptr_t start, intptr_t *restrict end) {
   intptr_t i = start;
   uint64_t result = 0;
   while (i < str_size) {
@@ -106,7 +106,7 @@ uint64_t qf_nonnull(1, 4) qf_parse_u64_decimal(const char *str, intptr_t str_siz
   *end = i;
   return result;
 }
-int64_t qf_nonnull(1, 4) qf_parse_i64_decimal(const char *str, intptr_t str_size, intptr_t start, intptr_t *end) {
+int64_t qf_nonnull(1, 4) qf_parse_i64_decimal(const char *restrict str, intptr_t str_size, intptr_t start, intptr_t *restrict end) {
   // sign
   bool negative = str[start] == '-';
   intptr_t i = negative || str[start] == '+' ? start + 1 : start;
@@ -125,7 +125,7 @@ int64_t qf_nonnull(1, 4) qf_parse_i64_decimal(const char *str, intptr_t str_size
   *end = i;
   return result;
 }
-uint64_t qf_nonnull(1, 4) qf_parse_u64_hex(const char *str, intptr_t str_size, intptr_t start, intptr_t *end) {
+uint64_t qf_nonnull(1, 4) qf_parse_u64_hex(const char *restrict str, intptr_t str_size, intptr_t start, intptr_t *restrict end) {
   uint64_t result = 0;
   intptr_t i = start;
   while (i < str_size) {
@@ -144,7 +144,7 @@ uint64_t qf_nonnull(1, 4) qf_parse_u64_hex(const char *str, intptr_t str_size, i
   *end = i;
   return result;
 }
-uint64_t qf_nonnull(1, 4, 5) qf_parse_f64_significand(const char *str, intptr_t str_size, intptr_t start, intptr_t *end, intptr_t *exponent_base10_ptr) {
+uint64_t qf_nonnull(1, 4, 5) qf_parse_f64_significand(const char *restrict str, intptr_t str_size, intptr_t start, intptr_t *restrict end, intptr_t *restrict exponent_base10_ptr) {
   uint64_t result = 0;
   intptr_t i = start;
   // integer
