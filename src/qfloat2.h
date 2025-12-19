@@ -43,7 +43,7 @@
     memcpy(v2, v1, sizeof(*(v1)));
   #define qf_abs(a) ((a) < 0 ? -(a) : (a))
   #define qf_min(a, b) ((a) < (b) ? (a) : (b))
-  #define qf_count_leading_zeros(a) __builtin_clzg(a)
+  #define qf_count_leading_zeros(a) ((typeof(a))__builtin_clzg(a))
 QF_ASSERT(sizeof(char) == 1);
 #endif
 
@@ -271,7 +271,8 @@ qf_f64 qf_parse_f64(const char *restrict str, intptr_t str_size, intptr_t start,
     } else if (exponent_10 > 308) {
       value = (qf_f64)1.0 / 0.0;
     } else {
-      significand_10 = significand_10 << qf_count_leading_zeros(significand_10);
+      uint64_t I = qf_count_leading_zeros(significand_10);
+      significand_10 = significand_10 << I;
       // TODO: make a build system to generate tables...
       qf_u128 z = POW5_INVERSE[exponent_10 + 342] * significand_10;
       if (qf_unlikely(z.high == -1 && z.low == -1 && (exponent_10 < -27 || exponent_10 > 55))) {
