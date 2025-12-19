@@ -4,42 +4,42 @@
 #include <stdbool.h>
 
 // common
-#if defined(__cplusplus) || (defined(_MSC_VER) && !defined(__clang__))
-  #define QF_ASSERT(condition) static_assert(condition, #condition)
-#else
-  #define QF_ASSERT(condition) _Static_assert(condition, #condition)
-#endif
-
-/* NOTE: QF_SIGNIFICAND_DIGITS_xx = Math.ceil(EXPLICIT_MANTISSA_BITS_xx * Math.log10(2)) */
-#define QF_SIGNIFICAND_DIGITS_f64 17
-#define QF_SIGNIFICAND_DIGITS_f32 7
-#define QF_SIGNIFICAND_DIGITS_f16 4
-QF_ASSERT(sizeof(double) == 8);
-QF_ASSERT(sizeof(float) == 4);
-QF_ASSERT(sizeof(char) == 1);
-
 #ifndef qf_assert
   #include <assert.h>
   #define qf_assert(condition) assert(condition)
 #endif
-#if defined(__clang__) || defined(__GNUC__)
-  #define qf_nonnull(...) __attribute__((nonnull(__VA_ARGS__)))
-  #define qf_likely(condition) __builtin_expect(condition, true)
-  #define qf_unlikely(condition) __builtin_expect(condition, false)
-#else
-  #define qf_nonnull(...)
-  #define qf_likely(condition) (condition)
-  #define qf_unlikely(condition) (condition)
-  #include <intrin.h> /* NOTE: required for overflow in MSVC */
+#ifndef QF_ASSERT
+  #if defined(__cplusplus) || (defined(_MSC_VER) && !defined(__clang__))
+    #define QF_ASSERT(condition) static_assert(condition, #condition)
+  #else
+    #define QF_ASSERT(condition) _Static_assert(condition, #condition)
+  #endif
+  #if defined(__clang__) || defined(__GNUC__)
+    #define qf_nonnull(...) __attribute__((nonnull(__VA_ARGS__)))
+    #define qf_likely(condition) __builtin_expect(condition, true)
+    #define qf_unlikely(condition) __builtin_expect(condition, false)
+  #else
+    #define qf_nonnull(...)
+    #define qf_likely(condition) (condition)
+    #define qf_unlikely(condition) (condition)
+    #include <intrin.h> /* NOTE: required for overflow in MSVC */
+  #endif
+  /* NOTE: When there aren't any `break` or `return` statements, jump over the if block. */
+  #define qf_small(condition) qf_likely(condition)
+  /* NOTE: When there are `break` or `return` statements, let the compiler decide.
+    X64 has a variable instruction size, so qf_likely() produces more instructions, but less bytecode,
+    on other architectures, qf_likely() probably produces more bytecode. */
+  #define qf_exit(condition) (condition)
+  #define qf_min(a, b) ((a) < (b) ? (a) : (b))
+QF_ASSERT(sizeof(char) == 1);
 #endif
-/* NOTE: When there aren't any `break` or `return` statements, jump over the if block. */
-#define qf_small(condition) qf_likely(condition)
-/* NOTE: When there are `break` or `return` statements, let the compiler decide.
-  X64 has a variable instruction size, so qf_likely() produces more instructions, but less bytecode,
-  on other architectures, qf_likely() probably produces more bytecode. */
-#define qf_exit(condition) (condition)
 
-#define qf_min(a, b) ((a) < (b) ? (a) : (b))
+// type
+typedef double qf_f64;
+QF_ASSERT(sizeof(qf_f64) == 8);
+/* NOTE: QF_SIGNIFICAND_DIGITS_xx = Math.ceil(EXPLICIT_MANTISSA_BITS_xx * Math.log10(2)) */
+#define QF_SIGNIFICAND_DIGITS_f64 17
+
 /* NOTE: overflows on the 65th bit */
 static bool qf_nonnull(3) qf_add_overflow_u64(uint64_t a, uint64_t b, uint64_t *restrict result_ptr) {
 #if defined(__clang__) || defined(__GNUC__)
@@ -181,4 +181,9 @@ uint64_t qf_nonnull(1, 4, 5) qf_parse_f64_significand(const char *restrict str, 
   *end = i;
   *exponent_base10_ptr = exponent_base10;
   return result;
+}
+
+// formatting - Ryū revisited: printf floating point conversion (https://dl.acm.org/doi/epdf/10.1145/3360595)
+void format_f64(char buffer[restrict 30], qf_f64 value) {
+  uint64_t value_u64 = 0;
 }

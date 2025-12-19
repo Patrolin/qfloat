@@ -183,7 +183,7 @@ bool str_equals(string a, string b) {
 }
 
 forward_declare Noreturn abort();
-void fprint(uintptr file, string str);
+forward_declare void fprint(uintptr file, string str);
 #if OS_WINDOWS
 typedef enum : uintptr {
   STDIN = -10,
