@@ -73,10 +73,16 @@ void main_multicore(Thread t) {
     for (intptr i = 0; i < countof(tests); i++) {
       Test test = tests[i];
       intptr end;
-      intptr exponent_base10;
+      int32_t exponent_base10;
       u64 parsed = qf_parse_f64_significand(test.in.ptr, (intptr)test.in.size, 0, &end, &exponent_base10);
       check(t, group, parsed == test.out, u64, parsed);
     }
   }
   test_summary(t, group);
+  if (single_core(t)) {
+    // string s = string("1.5");
+    string s = string("10000000000000000000");
+    intptr end;
+    qf_parse_f64(s.ptr, (intptr)s.size, 0, &end);
+  }
 }
