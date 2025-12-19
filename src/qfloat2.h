@@ -170,6 +170,7 @@ uint64_t qf_nonnull(1, 4, 5) qf_parse_f64_significand(const char *restrict str, 
   while (i < str_size && str[i] == '0') {
     i++;
   }
+  // TODO: maybe just check if did_overflow
   while (i < str_size && non_leading_zero_digits < QF_MAX_SIGNIFICAND_DIGITS_f64) {
     uint8_t digit = str[i] - '0';
     if (qf_exit(digit >= 10)) break;
@@ -178,6 +179,7 @@ uint64_t qf_nonnull(1, 4, 5) qf_parse_f64_significand(const char *restrict str, 
     i++;
   }
   // fraction
+  // TODO: maybe SWAR?
   int32_t exponent_base10 = 0;
   if (qf_small(i < str_size && str[i] == '.')) {
     i++;
@@ -195,6 +197,10 @@ uint64_t qf_nonnull(1, 4, 5) qf_parse_f64_significand(const char *restrict str, 
       exponent_base10--;
       i++;
     }
+  }
+  // ignore trailing noise (technically incorrect, but would require big ints)
+  while (i < str_size && (str[i] - '0' <= 9)) {
+    i++;
   }
   *end = i;
   *exponent_10_ptr = exponent_base10;
