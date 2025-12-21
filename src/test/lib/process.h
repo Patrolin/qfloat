@@ -127,5 +127,6 @@ static void run_process_impl(readonly string app, readonly BuildArgs* args) {
   // TODO: In a new thread: `execve(command, args, 0);`
   ASSERT(false);
 #endif
-  arena_reset(global_arena, (intptr)command);
+  // assert single-threaded
+  atomic_compare_exchange(&global_arena->next, (intptr*)&command, (intptr)command);
 }
