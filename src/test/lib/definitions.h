@@ -9,6 +9,7 @@
 #define ASSERT_MUlTIPLE_OF(a, b) ASSERT(a % b == 0)
 #define DISTINCT(type, name) \
   typedef type name
+#define OPAQUE(name) typedef struct name name;
 
 typedef char byte;
 #define byte(x) ((byte)(x))
@@ -137,8 +138,6 @@ ASSERT(OS_HUGE_PAGE_SIZE == 2 * MebiByte);
 #define align(n) __attribute__((aligned(n)))
 #define vector_size(n) __attribute__((vector_size(n)))
 // proc keywords
-/* private to file */
-#define private static
 #define forward_declare
 #define always_inline_ inline __attribute__((always_inline))
 #define never_inline __attribute__((noinline))
@@ -163,6 +162,12 @@ typedef struct {
   Size size;
 } Bytes;
 /* NOTE: utf8 string */
+typedef char* cstring;
+typedef readonly char* rcstring;
+#if OS_WINDOWS
+// typedef uint16_t* cwstring;
+// typedef readonly uint16_t* rcwstring;
+#endif
 typedef struct {
   readonly byte* ptr;
   Size size;
@@ -207,13 +212,8 @@ typedef enum : uintptr {
 })
 
 // CRT
-#if HAS_CRT
-  // IWYU pragma: begin_exports
-  #include <math.h>
-  #include <string.h>
-// IWYU pragma: end_exports
-#else
-extern void* memcpy(byte* dest, const byte* src, Size size) {
+#if NOSTDLIB
+extern void* memcpy(byte* dest, readonly byte* src, Size size) {
   byte* dest_end = dest + size;
   while (dest < dest_end) {
     *(dest++) = *(src++);
@@ -229,22 +229,11 @@ extern void* memset(byte* ptr, int x, Size size) {
   }
   return ptr;
 }
-  #define fma_f64(a, b, c) fma_f64_impl(__COUNTER__, a, b, c)
-#endif
-#if ARCH_X64
-  #define cpu_relax() asm volatile("pause")
-  #define fma_f64_impl(C, a, b, c) ({     \
-    f64 VAR(fma, C) = a;                  \
-    asm volatile("vfmadd213sd %0, %1, %2" \
-                 : "+x"(VAR(fma, C))      \
-                 : "x"(b), "x"(c));       \
-    VAR(fma, C);                          \
-  })
-// #include <emmintrin.h>
-// #include <xmmintrin.h>
-// #include <immintrin.h>
-// #undef min
-// #undef max
+#else
+  // IWYU pragma: begin_exports
+  #include <math.h>
+  #include <string.h>
+// IWYU pragma: end_exports
 #endif
 
 // builtins
@@ -336,7 +325,7 @@ typedef _Float16 f16;
 ASSERT(sizeof(f16) == 2);
 #endif
 /* NOTE: Windows is dumb */
-#if OS_WINDOWS && !HAS_CRT
+#if OS_WINDOWS && NOLIBC
 CINT _fltused = 0;
 #else
 // ASSERT(false);

@@ -325,11 +325,11 @@ qfloat_f64 str_to_f64(const char *_Nonnull str, qfloat_intptr str_size, qfloat_i
   }
 }
 qfloat_intptr sprint_f64(qfloat_f64 value, char buffer[_Nonnull static QFLOAT_SIZE_f64]) {
-/* TODO: format without libc */
-#if HAS_CRT
-  int size = snprintf(buffer, QFLOAT_SIZE_f64, "%.17g", value);
-#else
+#if NOLIBC
+  /* TODO: format without libc */
   int size = 0;
+#else
+  int size = snprintf(buffer, QFLOAT_SIZE_f64, "%.17g", value);
 #endif
   return qfloat_shorten_f64_string(value, buffer, size, qfloat_parse_f64_decimal);
 }

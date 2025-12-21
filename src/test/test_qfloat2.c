@@ -1,8 +1,7 @@
 // ./run -crt
 #include "lib/tests.h"
 #include "lib/threads.h"
-#define QFLOAT_NOLIBC !HAS_CRT
-#include "../src/qfloat2.h"
+#include "../qfloat2.h"
 
 void main_multicore(Thread t) {
   // qf_parse_u64_decimal()

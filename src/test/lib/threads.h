@@ -40,7 +40,7 @@ CUINT thread_entry(rawptr param) {
   return 0;
 }
 
-void start_threads() {
+void _init_threads() {
   // get `logical_core_count`
   u32 logical_core_count;
 #if RUN_SINGLE_THREADED

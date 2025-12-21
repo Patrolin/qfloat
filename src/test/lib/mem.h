@@ -20,7 +20,7 @@ ExceptionResult _page_fault_handler(_EXCEPTION_POINTERS* exception_info) {
 // ASSERT(false);
 #endif
 
-void init_page_fault_handler() {
+void _init_page_fault_handler() {
 #if OS_WINDOWS
   AddVectoredExceptionHandler(1, _page_fault_handler);
 #else

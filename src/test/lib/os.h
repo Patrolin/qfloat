@@ -3,7 +3,7 @@
 
 // common
 #if OS_WINDOWS
-  #if !HAS_CRT
+  #if NOLIBC
     #pragma comment(linker, "/ENTRY:_start")
   #endif
   #if RUN_WITHOUT_CONSOLE
@@ -24,6 +24,9 @@ DISTINCT(Handle, FileHandle);
   #elif ARCH_IS_32_BIT
     #define WINAPI TODO
   #endif
+foreign DWORD GetLastError();
+foreign BOOL CloseHandle(Handle handle);
+foreign BOOL WaitForSingleObject(Handle handle, DWORD milliseconds);
 #elif OS_LINUX
   #include "os_linux.h"
 
@@ -42,11 +45,11 @@ typedef enum : DWORD {
 
   #pragma comment(lib, "Kernel32.lib")
 foreign BOOL SetConsoleOutputCP(CodePage code_page);
-foreign BOOL WriteFile(FileHandle file, readonly byte* buffer, DWORD buffer_size, DWORD* bytes_written, rawptr overlapped);
+foreign BOOL WriteFile(FileHandle file, rcstring buffer, DWORD buffer_size, DWORD* bytes_written, rawptr overlapped);
 foreign void ExitProcess(CUINT exit_code);
 
 #elif OS_LINUX
-intptr write(FileHandle file, readonly byte* buffer, Size buffer_size) {
+intptr write(FileHandle file, rcstring buffer, Size buffer_size) {
   return syscall3(SYS_write, (uintptr)file, (uintptr)buffer, buffer_size);
 }
 Noreturn exit_group(CINT return_code) {
@@ -55,6 +58,52 @@ Noreturn exit_group(CINT return_code) {
 }
 #else
 ASSERT(false);
+#endif
+
+// process.build
+#if OS_WINDOWS
+typedef struct {
+  DWORD nLength;
+  rawptr lpSecurityDescriptor;
+  BOOL bInheritHandle;
+} SECURITY_ATTRIBUTES;
+typedef struct {
+  DWORD cb;
+  rcstring lpReserved;
+  rcstring lpDesktop;
+  rcstring lpTitle;
+  DWORD dwX;
+  DWORD dwY;
+  DWORD dwXSize;
+  DWORD dwYSize;
+  DWORD dwXCountChars;
+  DWORD dwYCountChars;
+  DWORD dwFillAttribute;
+  DWORD dwFlags;
+  WORD wShowWindow;
+  WORD cbReserved2;
+  rawptr lpReserved2;
+  Handle hStdInput;
+  Handle hStdOutput;
+  Handle hStdError;
+} STARTUPINFOA;
+typedef struct {
+  Handle hProcess;
+  Handle hThread;
+  DWORD dwProcessId;
+  DWORD dwThreadId;
+} PROCESS_INFORMATION;
+foreign BOOL CreateProcessA(
+    rcstring application_path,
+    rcstring command,
+    SECURITY_ATTRIBUTES* lpProcessAttributes,
+    SECURITY_ATTRIBUTES* lpThreadAttributes,
+    BOOL bInheritHandles,
+    DWORD dwCreationFlags,
+    rawptr lpEnvironment,
+    rcstring lpCurrentDirectory,
+    STARTUPINFOA* lpStartupInfo,
+    PROCESS_INFORMATION* lpProcessInformation);
 #endif
 
 // mem
@@ -72,9 +121,7 @@ typedef struct {
   uintptr ExceptionInformation[EXCEPTION_MAXIMUM_PARAMETERS];
 } EXCEPTION_RECORD;
 
-typedef struct {
-  /* ... */
-} CONTEXT;
+OPAQUE(CONTEXT);
 typedef struct {
   EXCEPTION_RECORD* ExceptionRecord;
   CONTEXT* ContextRecord;
@@ -141,11 +188,6 @@ typedef struct {
   WORD wProcessorLevel;
   WORD wProcessorRevision;
 } SYSTEM_INFO;
-typedef struct SECURITY_ATTRIBUTES {
-  DWORD nLength;
-  rawptr lpSecurityDescriptor;
-  BOOL bInheritHandle;
-} SECURITY_ATTRIBUTES;
 typedef DWORD PTHREAD_START_ROUTINE(rawptr param);
 typedef enum : DWORD {
   STACK_SIZE_PARAM_IS_A_RESERVATION = 0x00010000,
@@ -250,7 +292,7 @@ typedef enum : CUINT {
   O_TRUNC = 1 << 9,
   O_DIRECTORY = 1 << 16,
 } FileFlags;
-intptr open(readonly byte* path, FileFlags flags, CUINT mode) {
+intptr open(rcstring path, FileFlags flags, CUINT mode) {
   return syscall3(SYS_open, (uintptr)path, flags, mode);
 }
 #endif

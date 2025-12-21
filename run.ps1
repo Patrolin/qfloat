@@ -1,13 +1,11 @@
 param (
-  [switch]$crt,
+  [switch]$nolibc,
   [switch]$singlecore,
   [switch]$ndebug
 )
 $cargs = @("-march=native", "-masm=intel", "-std=gnu99", "-fno-signed-char")
-if ($crt) {
-  $cargs += @("-DHAS_CRT", "-DQFLOAT_HAS_CRT")
-} else {
-  $cargs += @("-nostdlib", "-fno-builtin", "-mno-stack-arg-probe")
+if ($nolibc) {
+  $cargs += @("-NOLIBC", "-nostdlib", "-fno-builtin", "-mno-stack-arg-probe")
 }
 if ($singlecore) {
   $cargs += @("-DSINGLE_CORE")
