@@ -1,0 +1,9 @@
+If:
+  PathMatch: [.*\.cpp]
+CompileFlags:
+  Remove:
+    - "-std=gnu99"
+    - "-nostdlib"
+  Add:
+    - "-shared"
+    - "-std=c++17"

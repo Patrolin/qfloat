@@ -1,5 +1,4 @@
 #pragma once
-#include <stdio.h>
 #include "definitions.h"
 #include "fmt.h"
 #include "os.h"
