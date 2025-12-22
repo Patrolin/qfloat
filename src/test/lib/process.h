@@ -103,11 +103,13 @@ static void run_process_impl(readonly string app, readonly BuildArgs* args) {
   byte* command = (byte*)global_arena->next;
   memcpy(command, app.ptr, app.size);
   byte* next = command + app.size;
-  for (intptr i = 0; i < args->count; i++) {
-    string str = args->start[i];
-    *(next++) = ' ';
-    memcpy(next, str.ptr, str.size);
-    next += str.size;
+  if (expect_likely(args != 0)) {
+    for (intptr i = 0; i < args->count; i++) {
+      string str = args->start[i];
+      *(next++) = ' ';
+      memcpy(next, str.ptr, str.size);
+      next += str.size;
+    }
   }
   (*next) = '\n';
   string command_str = (string){command, (Size)(next - command + 1)};
