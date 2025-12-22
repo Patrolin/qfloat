@@ -1,6 +1,9 @@
 *.cpp
 *.py
 *.obj
+*.dll
+*.exp
+*.lib
 *.exe
 *.ilk
 *.pdb
@@ -8,5 +11,6 @@
 *.bin
 *.out
 *-linux*
+min.c
 
 .vscode/settings.json

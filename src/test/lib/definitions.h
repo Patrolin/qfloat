@@ -141,7 +141,10 @@ ASSERT(OS_HUGE_PAGE_SIZE == 2 * MebiByte);
 #define forward_declare
 #define always_inline_ inline __attribute__((always_inline))
 #define never_inline __attribute__((noinline))
-#define foreign __declspec(dllimport)
+#if OS_WINDOWS
+  #define foreign __declspec(dllimport)
+  #define foreign_export __declspec(dllexport)
+#endif
 // #define stdcall __attribute__((__stdcall__))
 #define naked __attribute__((naked))
 #define Noreturn _Noreturn void
