@@ -255,7 +255,6 @@ qfloat_dd qfloat_parse_f64_significand(const char *_Nonnull str, qfloat_intptr s
   result_dd.low = (qfloat_f64)(result - result_rounded);
   return result_dd;
 }
-// TODO: use a table?
 qfloat_f64 SAFE_POWERS_OF_10[23] = {
     1e0,
     1e1,
@@ -311,7 +310,7 @@ qfloat_f64 qfloat_parse_f64_decimal(const char *_Nonnull str, qfloat_intptr str_
     exponent_base10--;
   }
   *end = i;
-  qfloat_f64 x = value.high + value.low;  // TODO: remove this probably
+  qfloat_f64 x = value.high + value.low;  // TODO: probably just do `qfloat_f64 x = value.high;`?
   return negative ? -x : x;
 }
 qfloat_f64 str_to_f64(const char *_Nonnull str, qfloat_intptr str_size, qfloat_intptr start, qfloat_intptr *_Nonnull end) {

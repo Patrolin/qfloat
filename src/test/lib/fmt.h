@@ -1,6 +1,5 @@
 #pragma once
 #include "definitions.h"
-#include "math.h"
 #include "os.h"
 
 // fprint()

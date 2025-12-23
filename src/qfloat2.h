@@ -5,7 +5,7 @@
 #include <stdio.h>
 
 // common
-#if !defined(QF_NOSTDLIB)
+#ifndef NOLIBC
   #include <assert.h>
   #include <string.h> /* NOTE: for memcpy() */
 #endif

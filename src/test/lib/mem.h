@@ -1,6 +1,5 @@
 #pragma once
 #include "definitions.h"
-#include "fmt.h" /* IWYU pragma: keep */
 #include "os.h"
 
 // page alloc

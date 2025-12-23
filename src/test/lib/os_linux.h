@@ -1,6 +1,7 @@
 #pragma once
 #include "definitions.h"
 
+#if NOLIBC
 typedef enum : intptr {
   EPERM = intptr(-1),
   ENOENT = intptr(-2),
@@ -138,6 +139,11 @@ typedef enum : intptr {
   ERFKILL = intptr(-132),
   EHWPOISON = intptr(-133),
 } Errno;
+#else
+/* IWYU pragma: begin_exports */
+  #include <errno.h>
+/* IWYU pragma: end_exports */
+#endif
 
 #if ARCH_X64
 intptr syscall1(uintptr id, uintptr a1) {

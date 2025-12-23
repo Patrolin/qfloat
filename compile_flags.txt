@@ -2,7 +2,6 @@
 -masm=intel
 -std=gnu99
 -fno-signed-char
--nostdlib
 -Werror
 -Wconversion
 -Wsign-conversion

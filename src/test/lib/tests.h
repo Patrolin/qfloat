@@ -19,7 +19,7 @@ typedef struct {
   u64 test_count;
   u64 fail_count;
 } TestGroup;
-bool NONNULL(2) test_group(Thread t, TestGroup** group, string name, Thread thread_count) {
+bool nonnull_(2) test_group(Thread t, TestGroup** group, string name, Thread thread_count) {
   if (expect_small(t == 0)) {
     *group = arena_alloc(global_arena, TestGroup);
     **group = (TestGroup){.name = name};

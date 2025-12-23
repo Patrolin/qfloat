@@ -131,9 +131,9 @@ ASSERT(OS_HUGE_PAGE_SIZE == 2 * MebiByte);
 #define readonly const
 #define restrict __restrict
 #if defined(__clang__) || defined(__GNUC__)
-  #define NONNULL(...) __attribute__((nonnull(__VA_ARGS__)))
+  #define nonnull_(...) __attribute__((nonnull(__VA_ARGS__)))
 #else
-  #define NONNULL(...)
+  #define nonnull_(...)
 #endif
 #define align(n) __attribute__((aligned(n)))
 #define vector_size(n) __attribute__((vector_size(n)))
@@ -215,7 +215,7 @@ typedef enum : uintptr {
 })
 
 // CRT
-#if NOSTDLIB
+#if NOLIBC
 extern void* memcpy(byte* dest, readonly byte* src, Size size) {
   byte* dest_end = dest + size;
   while (dest < dest_end) {
