@@ -1,16 +1,35 @@
-// clang build.c -o build.exe && build.exe
+// clang build.c -o build.exe && ./build.exe
 #pragma push_macro("SINGLE_CORE")
 #define SINGLE_CORE 1
 #include "src/test/lib/process.h"
 #pragma pop_macro("SINGLE_CORE")
 
-#define INPUT_FILE "src/test/test_qfloat2.c"
-#define OUTPUT_FILE "test_qfloat.exe"
+#define LIB_CHARCONV_INPUT "src/test/alternatives/lib_charconv.cpp"
+#define LIB_CHARCONV_OUTPUT "generated/charconv.dll"
+#define TESTS_INPUT "src/test/test_qfloat2.c"
+#define TESTS_OUTPUT "test_qfloat.exe"
+
+void build_lib_charconv();
+void run_tests();
 void main_singlecore() {
+  build_lib_charconv();
+  run_tests();
+}
+
+void build_lib_charconv() {
+  BuildArgs args = {};
+  alloc_arg(&args, LIB_CHARCONV_INPUT);
+  alloc_arg2(&args, "-o", LIB_CHARCONV_OUTPUT);
+  alloc_arg(&args, "-shared");
+  alloc_arg(&args, "-std=c++17");
+  alloc_arg(&args, "-O2");
+  run_process("clang", &args);
+}
+void run_tests() {
   BuildArgs args = {};
   // input
-  alloc_arg(&args, INPUT_FILE);
-  alloc_arg(&args, "-o=" OUTPUT_FILE);
+  alloc_arg(&args, TESTS_INPUT);
+  alloc_arg2(&args, "-o", TESTS_OUTPUT);
   // c standard
   alloc_arg(&args, "-march=native");
   alloc_arg(&args, "-masm=intel");
@@ -50,7 +69,7 @@ void main_singlecore() {
 #endif
   // compile
   // TODO: delete .pdb, .rdi?
-  run_process("clang.exe", &args);
+  run_process("clang", &args);
   // run
-  run_process(OUTPUT_FILE, 0);
+  run_process(TESTS_OUTPUT, 0);
 }

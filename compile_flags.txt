@@ -7,3 +7,4 @@
 -Wconversion
 -Wsign-conversion
 -Wnullable-to-nonnull-conversion
+-DSTB_SPRINTF_IMPLEMENTATION

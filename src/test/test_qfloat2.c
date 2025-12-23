@@ -1,10 +1,24 @@
-// ./run -crt
+// clang build.c -o build.exe && ./build.exe
+#include "../qfloat2.h"
+#define STB_SPRINTF_IMPLEMENTATION 1
+#include "alternatives/stb_sprintf.h"
+#define LOAD_DLL(dll_path) ModuleHandle module = LoadLibraryA(dll_path)
+#define DLL_IMPORT(module, name) name##_t name = (name##_t)(GetProcAddress(module, #name))
+#include "alternatives/lib_charconv.h" /* IWYU pragma: keep */
+
+#undef assert
 #include "lib/tests.h"
 #include "lib/threads.h"
-#include "../qfloat2.h"
 
 void main_multicore(Thread t) {
-  // qf_parse_u64_decimal()
+  // load `charconv.dll`
+  LOAD_DLL("generated/charconv.dll");
+  DLL_IMPORT(module, to_chars_f64);
+  DLL_IMPORT(module, to_chars_f32);
+  DLL_IMPORT(module, from_chars_f64);
+  DLL_IMPORT(module, from_chars_f32);
+  assert(to_chars_f64 != 0 && to_chars_f32 != 0 && from_chars_f64 != 0 && from_chars_f32 != 0);
+  // test qf_parse_u64_decimal()
   TestGroup* group;
   if (test_group(t, &group, string("qf_parse_u64_decimal()"), 1)) {
     TEST(string, u64);
@@ -21,7 +35,7 @@ void main_multicore(Thread t) {
     }
   }
   test_summary(t, group);
-  // qf_parse_i64_decimal()
+  // test qf_parse_i64_decimal()
   if (test_group(t, &group, string("qf_parse_i64_decimal()"), 1)) {
     TEST(string, i64);
     Test tests[] = {
@@ -39,7 +53,7 @@ void main_multicore(Thread t) {
     }
   }
   test_summary(t, group);
-  // qf_parse_u64_hex()
+  // test qf_parse_u64_hex()
   if (test_group(t, &group, string("qf_parse_u64_hex()"), 1)) {
     TEST(string, u64);
     Test tests[] = {
@@ -58,7 +72,7 @@ void main_multicore(Thread t) {
     }
   }
   test_summary(t, group);
-  // qf_parse_f64_significand()
+  // test qf_parse_f64_significand()
   if (test_group(t, &group, string("qf_parse_f64_significand()"), 1)) {
     TEST(string, u64);
     Test tests[] = {
@@ -78,10 +92,13 @@ void main_multicore(Thread t) {
     }
   }
   test_summary(t, group);
+  // TODO: test parsing floats
   if (single_core(t)) {
     // string s = string("1.5");
     string s = string("10000000000000000000");
     intptr end;
-    qf_parse_f64(s.ptr, (intptr)s.size, 0, &end);
+    f64 parsed = qf_parse_f64(s.ptr, (intptr)s.size, 0, &end);
+    assert(parsed == 10000000000000000000.0);
   }
+  // TODO: test formatting floats
 }

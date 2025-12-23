@@ -1,5 +1,6 @@
 // stb_sprintf - v1.10 - public domain snprintf() implementation
 // originally by Jeff Roberts / RAD Game Tools, 2015/10/20
+// - modified to not have errors with -Wconversion
 // http://github.com/nothings/stb
 //
 // allowed types:  sc uidBboXx p AaGgEef n
@@ -498,7 +499,7 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback,
 
       // get the field width
       if (f[0] == '*') {
-         fw = va_arg(va, stbsp__uint32);
+         fw = (stbsp__int32)va_arg(va, stbsp__uint32);
          ++f;
       } else {
          while ((f[0] >= '0') && (f[0] <= '9')) {
@@ -510,7 +511,7 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback,
       if (f[0] == '.') {
          ++f;
          if (f[0] == '*') {
-            pr = va_arg(va, stbsp__uint32);
+            pr = (stbsp__int32)va_arg(va, stbsp__uint32);
             ++f;
          } else {
             pr = 0;
@@ -591,7 +592,7 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback,
             s = (char *)"null";
          // get the length, limited to desired precision
          // always limit to ~0u chars since our counts are 32b
-         l = stbsp__strlen_limited(s, (pr >= 0) ? pr : ~0u);
+         l = stbsp__strlen_limited(s, (pr >= 0) ? (stbsp__uint32)pr : ~0u);
          lead[0] = 0;
          tail[0] = 0;
          pr = 0;
@@ -674,11 +675,11 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback,
          sn = s;
 
          // print the bits
-         n = pr;
+         n = (stbsp__uint32)pr;
          if (n > 13)
             n = 13;
          if (pr > (stbsp__int32)n)
-            tz = pr - n;
+            tz = pr - (stbsp__int32)n;
          pr = 0;
          while (n--) {
             *s++ = h[(n64 >> 60) & 15];
@@ -695,7 +696,7 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback,
          n = (dp >= 1000) ? 6 : ((dp >= 100) ? 5 : ((dp >= 10) ? 4 : 3));
          tail[0] = (char)n;
          for (;;) {
-            tail[n] = '0' + dp % 10;
+            tail[n] = (char)('0' + dp % 10);
             if (n <= 3)
                break;
             --n;
@@ -703,7 +704,7 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback,
          }
 
          dp = (int)(s - sn);
-         l = (int)(s - (num + 64));
+         l = (stbsp__uint32)(s - (num + 64));
          s = num + 64;
          cs = 1 + (3 << 24);
          goto scopy;
@@ -717,13 +718,13 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback,
          else if (pr == 0)
             pr = 1; // default is 6
          // read the double into a string
-         if (stbsp__real_to_str(&sn, &l, num, &dp, fv, (pr - 1) | 0x80000000))
+         if (stbsp__real_to_str(&sn, &l, num, &dp, fv, (stbsp__uint32)(pr - 1) | 0x80000000))
             fl |= STBSP__NEGATIVE;
 
          // clamp the precision and delete extra zeros after clamp
-         n = pr;
+         n = (stbsp__uint32)pr;
          if (l > (stbsp__uint32)pr)
-            l = pr;
+            l = (stbsp__uint32)pr;
          while ((l > 1) && (pr) && (sn[l - 1] == '0')) {
             --pr;
             --l;
@@ -732,14 +733,14 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback,
          // should we use %e
          if ((dp <= -4) || (dp > (stbsp__int32)n)) {
             if (pr > (stbsp__int32)l)
-               pr = l - 1;
+               pr = (stbsp__int32)(l - 1);
             else if (pr)
                --pr; // when using %e, there is one digit before the decimal
             goto doexpfromg;
          }
          // this is the insane action to get the pr to match %g semantics for %f
          if (dp > 0) {
-            pr = (dp < (stbsp__int32)l) ? l - dp : 0;
+            pr = (dp < (stbsp__int32)l) ? (stbsp__int32)l - dp : 0;
          } else {
             pr = -dp + ((pr > (stbsp__int32)l) ? (stbsp__int32) l : pr);
          }
@@ -752,7 +753,7 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback,
          if (pr == -1)
             pr = 6; // default is 6
          // read the double into a string
-         if (stbsp__real_to_str(&sn, &l, num, &dp, fv, pr | 0x80000000))
+         if (stbsp__real_to_str(&sn, &l, num, &dp, fv, (stbsp__uint32)pr | 0x80000000))
             fl |= STBSP__NEGATIVE;
       doexpfromg:
          tail[0] = 0;
@@ -772,11 +773,11 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback,
 
          // handle after decimal
          if ((l - 1) > (stbsp__uint32)pr)
-            l = pr + 1;
+            l = (stbsp__uint32)pr + 1;
          for (n = 1; n < l; n++)
             *s++ = sn[n];
          // trailing zeros
-         tz = pr - (l - 1);
+         tz = pr - (stbsp__int32)(l - 1);
          pr = 0;
          // dump expo
          tail[1] = h[0xe];
@@ -793,7 +794,7 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback,
 #endif
          tail[0] = (char)n;
          for (;;) {
-            tail[n] = '0' + dp % 10;
+            tail[n] = (char)('0' + dp % 10);
             if (n <= 3)
                break;
             --n;
@@ -821,7 +822,7 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback,
          if (pr == -1)
             pr = 6; // default is 6
          // read the double into a string
-         if (stbsp__real_to_str(&sn, &l, num, &dp, fv, pr))
+         if (stbsp__real_to_str(&sn, &l, num, &dp, fv, (stbsp__uint32)pr))
             fl |= STBSP__NEGATIVE;
       dofloatfromg:
          tail[0] = 0;
@@ -841,10 +842,10 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback,
             *s++ = '0';
             if (pr)
                *s++ = stbsp__period;
-            n = -dp;
+            n = (stbsp__uint32)-dp;
             if ((stbsp__int32)n > pr)
-               n = pr;
-            i = n;
+               n = (stbsp__uint32)pr;
+            i = (stbsp__int32)n;
             while (i) {
                if ((((stbsp__uintptr)s) & 3) == 0)
                   break;
@@ -861,13 +862,13 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback,
                --i;
             }
             if ((stbsp__int32)(l + n) > pr)
-               l = pr - n;
-            i = l;
+               l = (stbsp__uint32)pr - n;
+            i = (stbsp__int32)l;
             while (i) {
                *s++ = *sn++;
                --i;
             }
-            tz = pr - (n + l);
+            tz = pr - (stbsp__int32)(n + l);
             cs = 1 + (3 << 24); // how many tens did we write (for commas below)
          } else {
             cs = (fl & STBSP__TRIPLET_COMMA) ? ((600 - (stbsp__uint32)dp) % 3) : 0;
@@ -886,7 +887,7 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback,
                   }
                }
                if (n < (stbsp__uint32)dp) {
-                  n = dp - n;
+                  n = (stbsp__uint32)dp - n;
                   if ((fl & STBSP__TRIPLET_COMMA) == 0) {
                      while (n) {
                         if ((((stbsp__uintptr)s) & 3) == 0)
@@ -910,7 +911,7 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback,
                      }
                   }
                }
-               cs = (int)(s - (num + 64)) + (3 << 24); // cs is how many tens
+               cs = (stbsp__uint32)(s - (num + 64)) + (3 << 24); // cs is how many tens
                if (pr) {
                   *s++ = stbsp__period;
                   tz = pr;
@@ -929,16 +930,16 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback,
                         break;
                   }
                }
-               cs = (int)(s - (num + 64)) + (3 << 24); // cs is how many tens
+               cs = (stbsp__uint32)(s - (num + 64)) + (3 << 24); // cs is how many tens
                if (pr)
                   *s++ = stbsp__period;
-               if ((l - dp) > (stbsp__uint32)pr)
-                  l = pr + dp;
+               if ((l - (stbsp__uint32)dp) > (stbsp__uint32)pr)
+                  l = (stbsp__uint32)(pr + dp);
                while (n < l) {
                   *s++ = sn[n];
                   ++n;
                }
-               tz = pr - (l - dp);
+               tz = pr - ((stbsp__int32)l - dp);
             }
          }
          pr = 0;
@@ -1000,7 +1001,7 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback,
       case 'p': // pointer
          fl |= (sizeof(void *) == 8) ? STBSP__INTMAX : 0;
          pr = sizeof(void *) * 2;
-         fl &= ~STBSP__LEADINGZERO; // 'p' only prints the pointer with zeros
+         fl &= (stbsp__uint32)~STBSP__LEADINGZERO; // 'p' only prints the pointer with zeros
                                     // fall through - to X
 
       case 'X': // upper hex
@@ -1041,7 +1042,7 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback,
             if (fl & STBSP__TRIPLET_COMMA) {
                ++l;
                if ((l & 15) == ((l >> 4) & 15)) {
-                  l &= ~15;
+                  l &= (stbsp__uint32)~15;
                   *--s = stbsp__comma;
                }
             }
@@ -1146,10 +1147,10 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback,
       scopy:
          // get fw=leading/trailing space, pr=leading zeros
          if (pr < (stbsp__int32)l)
-            pr = l;
-         n = pr + lead[0] + tail[0] + tz;
+            pr = (stbsp__int32)l;
+         n = (stbsp__uint32)(pr + lead[0] + tail[0] + tz);
          if (fw < (stbsp__int32)n)
-            fw = n;
+            fw = (stbsp__int32)n;
          fw -= n;
          pr -= l;
 
@@ -1160,7 +1161,7 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback,
                pr = (fw > pr) ? fw : pr;
                fw = 0;
             } else {
-               fl &= ~STBSP__TRIPLET_COMMA; // if no leading zeros, then no commas
+               fl &= (stbsp__uint32)~STBSP__TRIPLET_COMMA; // if no leading zeros, then no commas
             }
          }
 
@@ -1207,7 +1208,7 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback,
             // copy leading zeros
             c = cs >> 24;
             cs &= 0xffffff;
-            cs = (fl & STBSP__TRIPLET_COMMA) ? ((stbsp__uint32)(c - ((pr + cs) % (c + 1)))) : 0;
+            cs = (fl & STBSP__TRIPLET_COMMA) ? ((stbsp__uint32)(c - (((stbsp__uint32)pr + cs) % (c + 1)))) : 0;
             while (pr > 0) {
                stbsp__cb_buf_clamp(i, pr);
                pr -= i;
@@ -1253,8 +1254,8 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback,
          n = l;
          while (n) {
             stbsp__int32 i;
-            stbsp__cb_buf_clamp(i, n);
-            n -= i;
+            stbsp__cb_buf_clamp(i, (stbsp__int32)n);
+            n -= (stbsp__uint32)i;
             STBSP__UNALIGNED(while (i >= 4) {
                *(stbsp__uint32 volatile *)bf = *(stbsp__uint32 volatile *)s;
                bf += 4;
@@ -1498,7 +1499,7 @@ static stbsp__int32 stbsp__real_to_parts(stbsp__int64 *bits, stbsp__int32 *expo,
 
    STBSP__COPYFP(b, d);
 
-   *bits = b & ((((stbsp__uint64)1) << 52) - 1);
+   *bits = (stbsp__uint64)b & ((((stbsp__uint64)1) << 52) - 1);
    *expo = (stbsp__int32)(((b >> 52) & 2047) - 1023);
 
    return (stbsp__int32)((stbsp__uint64) b >> 63);
@@ -1717,7 +1718,7 @@ static stbsp__int32 stbsp__real_to_str(char const **start, stbsp__uint32 *len, c
 
    if (expo == 2047) // is nan or inf?
    {
-      *start = (bits & ((((stbsp__uint64)1) << 52) - 1)) ? "NaN" : "Inf";
+      *start = ((stbsp__uint64)bits & ((((stbsp__uint64)1) << 52) - 1)) ? "NaN" : "Inf";
       *decimal_pos = STBSP__SPECIAL;
       *len = 3;
       return ng;
@@ -1763,7 +1764,7 @@ static stbsp__int32 stbsp__real_to_str(char const **start, stbsp__uint32 *len, c
    }
 
    // now do the rounding in integer land
-   frac_digits = (frac_digits & 0x80000000) ? ((frac_digits & 0x7ffffff) + 1) : (tens + frac_digits);
+   frac_digits = (frac_digits & 0x80000000) ? ((frac_digits & 0x7ffffff) + 1) : ((stbsp__uint32)tens + frac_digits);
    if ((frac_digits < 24)) {
       stbsp__uint32 dg = 1;
       if ((stbsp__uint64)bits >= stbsp__powten[9])
@@ -1776,11 +1777,11 @@ static stbsp__int32 stbsp__real_to_str(char const **start, stbsp__uint32 *len, c
       if (frac_digits < dg) {
          stbsp__uint64 r;
          // add 0.5 at the right position and round
-         e = dg - frac_digits;
+         e = (stbsp__int32)(dg - frac_digits);
          if ((stbsp__uint32)e >= 24)
             goto noround;
          r = stbsp__powten[e];
-         bits = bits + (r / 2);
+         bits = bits + ((stbsp__int64)r / 2);
          if ((stbsp__uint64)bits >= stbsp__powten[dg])
             ++tens;
          bits /= r;
@@ -1840,7 +1841,7 @@ static stbsp__int32 stbsp__real_to_str(char const **start, stbsp__uint32 *len, c
 
    *decimal_pos = tens;
    *start = out;
-   *len = e;
+   *len = (stbsp__uint32)e;
    return ng;
 }
 

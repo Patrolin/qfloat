@@ -26,7 +26,13 @@ DISTINCT(Handle, FileHandle);
   #endif
 foreign DWORD GetLastError();
 foreign BOOL CloseHandle(Handle handle);
-foreign BOOL WaitForSingleObject(Handle handle, DWORD milliseconds);
+typedef enum : DWORD {
+  WAIT_OBJECT_0 = 0,
+  WAIT_ABANDONED = 0x80,
+  WAIT_TIMEOUT = 0x102,
+  WAIT_FAILED = -1,
+} WaitResult;
+foreign WaitResult WaitForSingleObject(Handle handle, DWORD milliseconds);
 #elif OS_LINUX
   #include "os_linux.h"
 
@@ -104,6 +110,10 @@ foreign BOOL CreateProcessA(
     rcstring lpCurrentDirectory,
     STARTUPINFOA* lpStartupInfo,
     PROCESS_INFORMATION* lpProcessInformation);
+foreign BOOL GetExitCodeProcess(Handle hProcess, DWORD* exit_code);
+DISTINCT(Handle, ModuleHandle);
+foreign ModuleHandle LoadLibraryA(cstring dll_path);
+rawptr GetProcAddress(ModuleHandle module, cstring proc_name);
 #endif
 
 // mem

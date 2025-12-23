@@ -120,9 +120,14 @@ static void run_process_impl(readonly string app, readonly BuildArgs* args) {
   };
   PROCESS_INFORMATION process_info;
   bool ok = CreateProcessA(0, command, 0, 0, false, 0, 0, 0, &startup_info, &process_info);
-  CloseHandle(process_info.hThread);
   assert(ok);
-  WaitForSingleObject(process_info.hProcess, INFINITE);
+  WaitResult wait_result = WaitForSingleObject(process_info.hProcess, INFINITE);
+  assert(wait_result == WAIT_OBJECT_0);
+  u32 exit_code;
+  GetExitCodeProcess(process_info.hProcess, &exit_code);
+  if (exit_code != 0) exit_process((CINT)exit_code);
+
+  CloseHandle(process_info.hThread);
   CloseHandle(process_info.hProcess);
 #else
   // TODO: In a new thread: `execve(command, args, 0);`
