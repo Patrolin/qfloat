@@ -1,4 +1,4 @@
-// clang src\test\alternatives\lib_charconv.cpp -o generated/charconv.dll -shared -std=c++17 -O2
+// clang src/test/alternatives/lib_charconv.cpp -o generated/charconv.dll -shared -std=c++17 -O2
 #include <charconv>
 #define C_EXPORT extern "C" __declspec(dllexport)
 C_EXPORT void from_chars_f32(const char* start, const char* end, float* value) {
