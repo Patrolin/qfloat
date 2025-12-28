@@ -1,7 +1,9 @@
 // clang build.c -o build.exe && ./build.exe
 #pragma push_macro("SINGLE_CORE")
+#pragma push_macro("NASSERT")
 #define SINGLE_CORE 1
 #include "src/test/lib/process.h"
+#pragma pop_macro("NASSERT")
 #pragma pop_macro("SINGLE_CORE")
 
 #define LIB_CHARCONV_INPUT "src/test/alternatives/lib_charconv.cpp"
@@ -63,6 +65,9 @@ void run_tests() {
 #endif
 #if SINGLE_CORE
   alloc_arg(&args, "-DSINGLE_CORE");
+#endif
+#if NASSERT
+  alloc_arg(&args, "-DNASSERT");
 #endif
 #if NDEBUG
   alloc_arg(&args, "-DNDEBUG");

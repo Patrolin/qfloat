@@ -205,14 +205,16 @@ typedef enum : uintptr {
   STDERR = 2,
 } ConsoleHandleEnum;
 #endif
-#define assert(condition) assert_impl(condition, " " __FILE__ ":" STR(__LINE__) " assert(" #condition ")\n")
-#define assert2(condition, msg_cstr) assert_impl(condition, " " __FILE__ ":" STR(__LINE__) " " msg_cstr "\n")
-#define assert_impl(condition, msg_cstr) ({ \
-  if (expect_unlikely(!(condition))) {      \
-    fprint(STDERR, string(msg_cstr));       \
-    abort();                                \
-  }                                         \
-})
+#if NASSERT
+  #define assert(condition) (void)(condition)
+#else
+  #define assert(condition) ({                                                            \
+    if (expect_unlikely(!(condition))) {                                                  \
+      fprint(STDERR, string(" " __FILE__ ":" STR(__LINE__) " assert(" #condition ")\n")); \
+      abort();                                                                            \
+    }                                                                                     \
+  })
+#endif
 
 // CRT
 #if NOLIBC
