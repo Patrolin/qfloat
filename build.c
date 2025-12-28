@@ -46,7 +46,7 @@ void run_tests() {
 #if OS_WINDOWS
   alloc_arg(&args, "-Wl,/STACK:0x100000");
 #elif OS_LINUX
-  /* NOTE: linux forces it's own stack size on you, which you can only reduce */
+  /* NOTE: linux forces it's own stack size on you, which you can only reduce at runtime */
 #endif
   // params
 #if OPT
