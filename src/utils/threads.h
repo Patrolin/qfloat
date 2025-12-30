@@ -72,7 +72,7 @@ void _init_threads() {
     global_threads->thread_infos[t].threads_end = logical_core_count;
     if (expect_likely(t > 0)) {
 #if OS_WINDOWS
-      assert(CreateThread(0, 0, thread_entry, rawptr(uintptr(t)), STACK_SIZE_PARAM_IS_A_RESERVATION, 0) != 0);
+      assert(CreateThread(0, 0, thread_entry, (rawptr)uintptr(t), STACK_SIZE_PARAM_IS_A_RESERVATION, 0) != 0);
 #elif OS_LINUX
       rlimit stack_size_limit;
       assert(getrlimit(RLIMIT_STACK, &stack_size_limit) >= 0);
@@ -87,7 +87,7 @@ void _init_threads() {
       stack = stack + sizeof(new_thread_data);
   #endif
       stack_data->entry = thread_entry;
-      stack_data->param = rawptr(uintptr(t));
+      stack_data->param = (rawptr)uintptr(t);
       ThreadFlags flags = CLONE_VM | CLONE_FS | CLONE_FILES | CLONE_SIGHAND | CLONE_THREAD | CLONE_SYSVSEM;
       /* NOTE: SIGCHLD is the only one that doesn't print garbage depending on which thread exits... */
       intptr error = newthread(flags | (ThreadFlags)SIGCHLD, stack_data);

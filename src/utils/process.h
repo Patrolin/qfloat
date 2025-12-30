@@ -30,7 +30,6 @@ Noreturn exit_process(CINT exit_code) {
   for (;;);
 }
 Noreturn abort() {
-  /* NOTE: technically you should signal abort on linux, or something? */
   exit_process(1);
 }
 
@@ -118,12 +117,7 @@ static void run_process_impl(readonly string app, readonly BuildArgs* args) {
   };
   PROCESS_INFORMATION process_info;
   println(string, command_str);
-  bool ok;
-  if (args != 0) {
-    ok = CreateProcessA(0, command, 0, 0, false, 0, 0, 0, &startup_info, &process_info);
-  } else {
-    ok = CreateProcessA(command, 0, 0, 0, false, 0, 0, 0, &startup_info, &process_info);
-  }
+  bool ok = CreateProcessA(0, command, 0, 0, false, 0, 0, 0, &startup_info, &process_info);
   if (!ok) {
     DWORD err = GetLastError();
     printfln2(string("err: %, ok: %"), u32, err, bool, ok);

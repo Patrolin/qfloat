@@ -18,8 +18,7 @@ typedef uintptr_t uintptr;
 #define uintptr(x) ((uintptr)(x))
 typedef intptr_t intptr;
 #define intptr(x) ((intptr)(x))
-typedef void* rawptr;
-#define rawptr(x) ((rawptr)(x))
+#define rawptr void*
 #define Size(x) ((Size)(x))
 typedef enum : uintptr {
   Byte = 1,
@@ -159,17 +158,16 @@ ASSERT(OS_HUGE_PAGE_SIZE == 2 * MebiByte);
 /* NOTE: When there are `break` or `return` statements, let the compiler decide. */
 #define expect_exit(condition) (condition)
 
-// utils
+// utf8 strings
 typedef struct {
   byte* ptr;
   Size size;
 } Bytes;
-/* NOTE: utf8 string */
-typedef char* cstring;
-typedef readonly char* rcstring;
+#define cstring char*
+#define rcstring readonly char*
 #if OS_WINDOWS
-// typedef uint16_t* cwstring;
-// typedef readonly uint16_t* rcwstring;
+// #define cwstring uint16_t*;
+// #define rcwstring readonly uint16_t*;
 #endif
 typedef struct {
   readonly byte* ptr;
@@ -190,6 +188,7 @@ bool str_equals(string a, string b) {
   return true;
 }
 
+// assert
 forward_declare Noreturn abort();
 forward_declare void fprint(uintptr file, string str);
 #if OS_WINDOWS

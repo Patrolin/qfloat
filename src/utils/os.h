@@ -102,17 +102,17 @@ typedef struct {
 foreign BOOL CreateProcessA(
     rcstring application_path,
     cstring command,
-    SECURITY_ATTRIBUTES* lpProcessAttributes,
-    SECURITY_ATTRIBUTES* lpThreadAttributes,
-    BOOL bInheritHandles,
-    DWORD dwCreationFlags,
-    rawptr lpEnvironment,
-    rcstring lpCurrentDirectory,
-    STARTUPINFOA* lpStartupInfo,
-    PROCESS_INFORMATION* lpProcessInformation);
+    readonly SECURITY_ATTRIBUTES* process_security,
+    readonly SECURITY_ATTRIBUTES* thread_security,
+    BOOL inherit_handles,
+    DWORD creation_flags,
+    readonly rawptr env,
+    rcstring current_dir,
+    readonly STARTUPINFOA* startup_info,
+    PROCESS_INFORMATION* process_info);
 foreign BOOL GetExitCodeProcess(Handle hProcess, DWORD* exit_code);
 DISTINCT(Handle, ModuleHandle);
-foreign ModuleHandle LoadLibraryA(cstring dll_path);
+foreign ModuleHandle LoadLibraryA(rcstring dll_path);
 rawptr GetProcAddress(ModuleHandle module, cstring proc_name);
 #endif
 
@@ -210,14 +210,14 @@ typedef enum : DWORD {
   #pragma comment(lib, "Synchronization.lib")
 foreign void GetSystemInfo(SYSTEM_INFO* lpSystemInfo);
 foreign ThreadHandle CreateThread(
-    SECURITY_ATTRIBUTES* security,
+    readonly SECURITY_ATTRIBUTES* security,
     Size stack_size,
     PTHREAD_START_ROUTINE start_proc,
-    rawptr param,
+    readonly rawptr param,
     DWORD flags,
     DWORD* thread_id);
-foreign void WaitOnAddress(volatile rawptr address, rawptr while_value, Size address_size, DWORD timeout);
-foreign void WakeByAddressAll(rawptr address);
+foreign void WaitOnAddress(volatile rawptr address, readonly rawptr while_value, Size address_size, DWORD timeout);
+foreign void WakeByAddressAll(readonly rawptr address);
 #elif OS_LINUX
 typedef CINT pid_t;
 typedef u64 rlim_t;
