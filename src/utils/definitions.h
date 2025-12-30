@@ -338,8 +338,8 @@ CINT _fltused = 0;
 // atomics: https://gcc.gnu.org/onlinedocs/gcc/_005f_005fatomic-Builtins.html
 #define volatile_store(address, value) __atomic_store_n(address, value, __ATOMIC_RELAXED)
 #define volatile_load(address) __atomic_load_n(address, __ATOMIC_RELAXED)
-#define compiler_fence() __atomic_signal_fence(__ATOMIC_SEQ_CST)
-#define mfence() __atomic_thread_fence(__ATOMIC_SEQ_CST)
+// #define compiler_fence() __atomic_signal_fence(__ATOMIC_SEQ_CST)
+#define memory_fence() __atomic_thread_fence(__ATOMIC_SEQ_CST)
 
 #define atomic_store(address, value) __atomic_store_n(address, value, __ATOMIC_SEQ_CST)
 #define atomic_load(address) __atomic_load_n(address, __ATOMIC_SEQ_CST)
