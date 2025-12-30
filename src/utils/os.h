@@ -101,7 +101,7 @@ typedef struct {
 } PROCESS_INFORMATION;
 foreign BOOL CreateProcessA(
     rcstring application_path,
-    rcstring command,
+    cstring command,
     SECURITY_ATTRIBUTES* lpProcessAttributes,
     SECURITY_ATTRIBUTES* lpThreadAttributes,
     BOOL bInheritHandles,

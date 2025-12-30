@@ -15,17 +15,12 @@ ExceptionResult _page_fault_handler(_EXCEPTION_POINTERS* exception_info) {
   }
   return EXCEPTION_EXECUTE_HANDLER;
 }
-#else
-// ASSERT(false);
-#endif
-
 void _init_page_fault_handler() {
-#if OS_WINDOWS
   AddVectoredExceptionHandler(1, _page_fault_handler);
-#else
-  // ASSERT(false);
-#endif
 }
+#else
+  #define _init_page_fault_handler()
+#endif
 
 Bytes page_reserve(Size size) {
   Bytes buffer;

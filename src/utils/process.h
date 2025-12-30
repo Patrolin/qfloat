@@ -81,11 +81,11 @@ typedef struct {
 #endif
   Size count;
 } BuildArgs;
-#define alloc_arg(args, arg) alloc_arg_impl(args, string(arg))
-#define alloc_arg2(args, arg1, arg2)  \
-  alloc_arg_impl(args, string(arg1)); \
-  alloc_arg_impl(args, string(arg2))
-static void alloc_arg_impl(BuildArgs* restrict args, string arg) {
+#define arg_alloc(args, arg) arg_alloc_impl(args, string(arg))
+#define arg_alloc2(args, arg1, arg2)  \
+  arg_alloc_impl(args, string(arg1)); \
+  arg_alloc_impl(args, string(arg2))
+static void arg_alloc_impl(BuildArgs* restrict args, string arg) {
 #if OS_WINDOWS
   string* ptr = arena_alloc(global_arena, string);
 #elif OS_LINUX
@@ -112,14 +112,23 @@ static void run_process_impl(readonly string app, readonly BuildArgs* args) {
   }
   (*next) = '\n';
   string command_str = (string){command, (Size)(next - command + 1)};
-  print_string(command_str);
   (*next) = '\0';
   // start new process
-  STARTUPINFOA startup_info = (STARTUPINFOA){
+  STARTUPINFOA startup_info = {
       .cb = sizeof(STARTUPINFOA),
   };
   PROCESS_INFORMATION process_info;
-  bool ok = CreateProcessA(0, command, 0, 0, false, 0, 0, 0, &startup_info, &process_info);
+  println(string, command_str);
+  bool ok;
+  if (args != 0) {
+    ok = CreateProcessA(0, command, 0, 0, false, 0, 0, 0, &startup_info, &process_info);
+  } else {
+    ok = CreateProcessA(command, 0, 0, 0, false, 0, 0, 0, &startup_info, &process_info);
+  }
+  if (!ok) {
+    DWORD err = GetLastError();
+    printfln2(string("err: %, ok: %"), u32, err, bool, ok);
+  }
   assert(ok);
   WaitResult wait_result = WaitForSingleObject(process_info.hProcess, INFINITE);
   assert(wait_result == WAIT_OBJECT_0);

@@ -2,79 +2,98 @@
 #pragma push_macro("SINGLE_CORE")
 #pragma push_macro("NASSERT")
 #define SINGLE_CORE 1
-#include "src/test/lib/process.h"
+#include "src/utils/process.h"
 #pragma pop_macro("NASSERT")
 #pragma pop_macro("SINGLE_CORE")
 
-#define LIB_CHARCONV_INPUT "src/test/alternatives/lib_charconv.cpp"
-#define LIB_CHARCONV_OUTPUT "generated/charconv.dll"
-#define TESTS_INPUT "src/test/test_qfloat2.c"
-#define TESTS_OUTPUT "test_qfloat.exe"
+// paths
+#define GEN_FLOAT_TABLES "src/gen_float_tables.c"
+#define GEN_FLOAT_TABLES_EXE "gen_float_tables.exe"
+#define GEN_FLOAT_TABLES_DEST "generated/float_tables.h"
 
+#define LIB_CHARCONV "src/test/alternatives/lib_charconv.cpp"
+#define LIB_CHARCONV_DLL "generated/charconv.dll"
+
+#define TEST_QFLOAT "src/test/test_qfloat2.c"
+#define TEST_QFLOAT_EXE "test_qfloat.exe"
+
+void gen_float_tables();
 void build_lib_charconv();
 void run_tests();
 void main_singlecore() {
+  gen_float_tables();
   build_lib_charconv();
   run_tests();
 }
 
+void set_c99(BuildArgs* args) {
+  arg_alloc(args, "-march=native");
+  arg_alloc(args, "-masm=intel");
+  arg_alloc(args, "-std=gnu99");
+  arg_alloc(args, "-fno-signed-char");
+  arg_alloc(args, "-Werror");
+  arg_alloc(args, "-Wconversion");
+  arg_alloc(args, "-Wsign-conversion");
+  arg_alloc(args, "-Wnullable-to-nonnull-conversion");
+}
+void gen_float_tables() {
+  BuildArgs args = {};
+  arg_alloc(&args, GEN_FLOAT_TABLES);
+  arg_alloc2(&args, "-o", GEN_FLOAT_TABLES_EXE);
+  set_c99(&args);
+  run_process("clang", &args);
+  run_process("./" GEN_FLOAT_TABLES_EXE, 0);
+}
 void build_lib_charconv() {
   BuildArgs args = {};
-  alloc_arg(&args, LIB_CHARCONV_INPUT);
-  alloc_arg2(&args, "-o", LIB_CHARCONV_OUTPUT);
-  alloc_arg(&args, "-shared");
-  alloc_arg(&args, "-std=c++17");
-  alloc_arg(&args, "-O2");
+  arg_alloc(&args, LIB_CHARCONV);
+  arg_alloc2(&args, "-o", LIB_CHARCONV_DLL);
+  arg_alloc(&args, "-shared");
+  arg_alloc(&args, "-std=c++17");
+  arg_alloc(&args, "-O2");
   run_process("clang", &args);
 }
 void run_tests() {
   BuildArgs args = {};
   // input
-  alloc_arg(&args, TESTS_INPUT);
-  alloc_arg2(&args, "-o", TESTS_OUTPUT);
+  arg_alloc(&args, TEST_QFLOAT);
+  arg_alloc2(&args, "-o", TEST_QFLOAT_EXE);
   // c standard
-  alloc_arg(&args, "-march=native");
-  alloc_arg(&args, "-masm=intel");
-  alloc_arg(&args, "-std=gnu99");
-  alloc_arg(&args, "-fno-signed-char");
-  alloc_arg(&args, "-Werror");
-  alloc_arg(&args, "-Wconversion");
-  alloc_arg(&args, "-Wsign-conversion");
-  alloc_arg(&args, "-Wnullable-to-nonnull-conversion");
+  set_c99(&args);
   // linker
-  alloc_arg(&args, "-fuse-ld=lld");
+  arg_alloc(&args, "-fuse-ld=lld");
 #if OS_WINDOWS
-  alloc_arg(&args, "-Wl,/STACK:0x100000");
+  arg_alloc(&args, "-Wl,/STACK:0x100000");
 #elif OS_LINUX
   /* NOTE: linux forces it's own stack size on you, which you can only reduce at runtime */
 #endif
   // params
 #if OPT
-  alloc_arg(&args, "-O2");
-  alloc_arg(&args, "-flto");
-  alloc_arg(&args, "-g");
+  arg_alloc(&args, "-O2");
+  arg_alloc(&args, "-flto");
+  arg_alloc(&args, "-g");
 #else
-  alloc_arg(&args, "-O0");
-  alloc_arg(&args, "-g");
+  arg_alloc(&args, "-O0");
+  arg_alloc(&args, "-g");
 #endif
 #if NOLIBC
-  alloc_arg(&args, "-nostdlib");
-  alloc_arg(&args, "-fno-builtin");
-  alloc_arg(&args, "-mno-stack-arg-probe");
-  alloc_arg(&args, "-DNOLIBC");
+  arg_alloc(&args, "-nostdlib");
+  arg_alloc(&args, "-fno-builtin");
+  arg_alloc(&args, "-mno-stack-arg-probe");
+  arg_alloc(&args, "-DNOLIBC");
 #endif
 #if SINGLE_CORE
-  alloc_arg(&args, "-DSINGLE_CORE");
+  arg_alloc(&args, "-DSINGLE_CORE");
 #endif
 #if NASSERT
-  alloc_arg(&args, "-DNASSERT");
+  arg_alloc(&args, "-DNASSERT");
 #endif
 #if NDEBUG
-  alloc_arg(&args, "-DNDEBUG");
+  arg_alloc(&args, "-DNDEBUG");
 #endif
   // compile
   // TODO: delete .pdb, .rdi?
   run_process("clang", &args);
   // run
-  run_process(TESTS_OUTPUT, 0);
+  run_process("./" TEST_QFLOAT_EXE, 0);
 }

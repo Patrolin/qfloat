@@ -7,8 +7,8 @@
 #include "alternatives/lib_charconv.h" /* IWYU pragma: keep */
 
 #undef assert
-#include "lib/tests.h"
-#include "lib/threads.h"
+#include "../utils/threads.h"
+#include "../utils/tests.h"
 
 void main_multicore(Thread t) {
   // load `charconv.dll`

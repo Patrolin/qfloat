@@ -411,3 +411,21 @@ ASSERT(__atomic_always_lock_free(8, 0));
 #define add_overflow(a, b, dest) __builtin_add_overflow(a, b, dest)
 #define sub_overflow(a, b, dest) __builtin_sub_overflow(a, b, dest)
 #define mul_overflow(a, b, dest) __builtin_mul_overflow(a, b, dest)
+#define add_with_carry(a, b, c, carry_dest) _Generic((a), \
+    u64: __builtin_addcll(a, b, c, (void*)carry_dest),    \
+    u32: __builtin_addcl(a, b, c, (void*)carry_dest),     \
+    u16: __builtin_addcs(a, b, c, (void*)carry_dest),     \
+    u8: __builtin_addcb(a, b, c, (void*)carry_dest),      \
+    i64: __builtin_addcll(a, b, c, (void*)carry_dest),    \
+    i32: __builtin_addcl(a, b, c, (void*)carry_dest),     \
+    i16: __builtin_addcs(a, b, c, (void*)carry_dest),     \
+    i8: __builtin_addcb(a, b, c, (void*)carry_dest))
+#define sub_with_carry(a, b, c, carry_dest) _Generic((a), \
+    u64: __builtin_subcll(a, b, c, (void*)carry_dest),    \
+    u32: __builtin_subcl(a, b, c, (void*)carry_dest),     \
+    u16: __builtin_subcs(a, b, c, (void*)carry_dest),     \
+    u8: __builtin_subcb(a, b, c, (void*)carry_dest),      \
+    i64: __builtin_subcll(a, b, c, (void*)carry_dest),    \
+    i32: __builtin_subcl(a, b, c, (void*)carry_dest),     \
+    i16: __builtin_subcs(a, b, c, (void*)carry_dest),     \
+    i8: __builtin_subcb(a, b, c, (void*)carry_dest))

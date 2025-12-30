@@ -306,7 +306,7 @@ void print_string(string str) {
 }
 #define print_copy(t1, v1) print_copy_impl(__COUNTER__, t1, v1)
 #define print_copy_impl(C, t1, v1) ({                                   \
-  intptr VAR(max_size, C) = sprint_size1(t1, v1);                       \
+  Size VAR(max_size, C) = sprint_size1(t1, v1);                         \
   STACK_BUFFER(VAR(buffer, C), VAR(max_size, C), VAR(ptr_end, C));      \
                                                                         \
   Size VAR(size, C) = CONCAT(sprint_, t1)(v1, VAR(ptr_end, C));         \
@@ -316,7 +316,7 @@ void print_string(string str) {
 #define print(t1, v1) IF(IS_STRING(t1), print_string(v1), print_copy(t1, v1))
 #define println(t1, v1) println_impl(__COUNTER__, t1, v1)
 #define println_impl(C, t1, v1) ({                                      \
-  intptr VAR(max_size, C) = sprint_size1(t1, v1) + 1;                   \
+  Size VAR(max_size, C) = sprint_size1(t1, v1) + 1;                     \
   STACK_BUFFER(VAR(buffer, C), VAR(max_size, C), VAR(ptr_end, C));      \
                                                                         \
   *(VAR(ptr_end, C) - 1) = '\n';                                        \
