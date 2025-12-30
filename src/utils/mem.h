@@ -51,6 +51,7 @@ typedef struct {
   intptr next;
   intptr end;
 } ArenaAllocator;
+global ArenaAllocator* global_arena;
 ArenaAllocator* arena_allocator(Bytes buffer) {
   ArenaAllocator* arena = (ArenaAllocator*)buffer.ptr;
   arena->next = intptr(buffer.ptr + sizeof(ArenaAllocator));

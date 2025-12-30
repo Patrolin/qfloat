@@ -1,6 +1,5 @@
 #include "definitions.h"
 #include "mem.h"
-#include "process.h"
 
 #define max(a, b) ((a) > (b) ? (a) : (b))
 
@@ -36,6 +35,7 @@ Integer* integer_alloc_sign_extend(Integer* restrict a, u64 new_digits_size) {
 }
 Integer* integer_alloc_add(Integer* restrict a, Integer* restrict b) {
   u64 max_digits_size = max(a->digits_size, b->digits_size) + 1;
+  // TODO: sign extend on demand instead
   Integer* left = integer_alloc_sign_extend(a, max_digits_size);
   Integer* right = integer_alloc_sign_extend(b, max_digits_size);
   intptr i = 0;
@@ -49,7 +49,7 @@ Integer* integer_alloc_mul(Integer* restrict b) {
   /* TODO:
   - alloc(a + b)
   - sign extend up to that amount
-  - mul
+  - mul via crazy algorithm
   */
   return 0;
 }

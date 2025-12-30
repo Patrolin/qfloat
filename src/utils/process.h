@@ -13,7 +13,6 @@ void _init_console() {
 #endif
 }
 forward_declare void _init_page_fault_handler();
-ArenaAllocator* global_arena;
 void _init_shared_arena() {
   Bytes buffer = page_reserve(VIRTUAL_MEMORY_TO_RESERVE);
   global_arena = arena_allocator(buffer);
