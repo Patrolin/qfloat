@@ -50,24 +50,47 @@ Integer integer_alloc_add(Integer a, Integer b) {
   return result;
 }
 Integer integer_alloc_sub(Integer a, Integer b) {
-  // TODO: faster subtract
-  return integer_alloc_add(a, integer_alloc_negate(b));
+  u64 max_chunks_size = max(a.chunks_size, b.chunks_size) + 1;
+  Integer result = integer_alloc_sign_extend(a, max_chunks_size);
+  intptr i = 0;
+  u64 borrow = 0;
+  do {
+    result.chunks[i] = sub_with_borrow(result.chunks[i], integer_get_chunk(b, i), borrow, &borrow);
+  } while (++i < max_chunks_size);
+  return result;
 }
 Integer _integer_alloc_karatsuba_mul(Integer a, Integer b) {
+  // assert(a.chunks_size == b.chunks_size && a.chunks_size != 0 && a.chunks_size is a power of two)
   if (expect_likely(a.chunks_size == 1)) {
-    // TODO: mul128
-    return a;
+    __uint128_t result_128 = (__uint128_t)a.chunks[0] * (__uint128_t)b.chunks[0];
+    Integer result = integer_alloc(2);
+    result.chunks[0] = result_128 & (u64)-1;
+    result.chunks[1] = u64(result_128 >> 64);
+    return result;
   } else {
-    u64 split = a.chunks_size / 2;
-    Integer A = (Integer){a.chunks + split, split};
-    Integer C = (Integer){a.chunks, split};
-    Integer B = (Integer){b.chunks + split, split};
-    Integer D = (Integer){b.chunks, split};
-    Integer ApB = integer_alloc_add(A, B);
-    Integer CpD = integer_alloc_add(C, D);
-    Integer result = _integer_alloc_karatsuba_mul(ApB, CpD);
-    result = integer_alloc_sub(result, _integer_alloc_karatsuba_mul(A, C));
-    result = integer_alloc_sub(result, _integer_alloc_karatsuba_mul(B, D));
+    intptr split = a.chunks_size / 2;
+    Integer A = (Integer){a.chunks + split, u64(split)};
+    Integer C = (Integer){a.chunks, u64(split)};
+    Integer B = (Integer){b.chunks + split, u64(split)};
+    Integer D = (Integer){b.chunks, u64(split)};
+    // TODO: alloc temporaries on the stack instead
+    Integer result_0 = _integer_alloc_karatsuba_mul(C, D);
+    Integer result_2 = _integer_alloc_karatsuba_mul(A, B);
+    Integer result_1 = _integer_alloc_karatsuba_mul(integer_alloc_add(A, C), integer_alloc_add(B, D));
+    result_1 = integer_alloc_sub(result_1, result_0);
+    result_1 = integer_alloc_sub(result_1, result_2);
+    // merge results
+    Integer result = integer_alloc_sign_extend(result_0, a.chunks_size * 2);
+    intptr i = split;
+    u64 carry = 0;
+    do {
+      result.chunks[i] = add_with_carry(result.chunks[i], integer_get_chunk(result_1, i - split), carry, &carry);
+    } while (++i < result.chunks_size);
+    i = split * 2;
+    carry = 0;
+    do {
+      result.chunks[i] = add_with_carry(result.chunks[i], integer_get_chunk(result_1, i - split * 2), carry, &carry);
+    } while (++i < result.chunks_size);
     return result;
   }
 }
