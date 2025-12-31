@@ -6,50 +6,85 @@
 // Integer
 typedef struct {
   /* NOTE: two's complement */
-  u64 digits_size;
-  u64 digits[];
+  u64* chunks;
+  u64 chunks_size;
 } Integer;
-Integer* integer_alloc_negate(Integer* restrict a) {
-  Integer* result = arena_alloc_flexible(global_arena, Integer, u64, a->digits_size);
-  result->digits_size = a->digits_size;
+static u64 integer_is_negative(Integer a) {
+  return a.chunks[a.chunks_size - 1] >> 63;
+}
+static u64 integer_get_chunk(Integer a, intptr i) {
+  u64 sign_extension = integer_is_negative(a) ? u64(-1) : 0;
+  return i < a.chunks_size ? a.chunks[i] : sign_extension;
+}
+#define integer_alloc(chunks_size) {arena_alloc_array(global_arena, u64, chunks_size), chunks_size}
+Integer integer_alloc_sign_extend(Integer a, u64 new_chunks_size) {
+  if (expect_unlikely(a.chunks_size >= new_chunks_size)) return a;
+  Integer result = integer_alloc(new_chunks_size);
+  intptr i = 0;
+  do {
+    result.chunks[i] = a.chunks[i];
+  } while (++i < a.chunks_size);
+  u64 sign_extension = integer_is_negative(a) > MAX(i64) ? u64(-1) : 0;
+  do {
+    result.chunks[i] = sign_extension;
+  } while (++i < new_chunks_size);
+  return result;
+}
+Integer integer_alloc_negate(Integer a) {
+  Integer result = integer_alloc(a.chunks_size);
   intptr i = 0;
   u64 carry = 1;
   do {
-    carry = (u64)add_overflow(~a->digits[i], carry, &result->digits[i]);
-  } while (++i < a->digits_size);
+    carry = (u64)add_overflow(~a.chunks[i], carry, &result.chunks[i]);
+  } while (++i < a.chunks_size);
   return result;
 }
-Integer* integer_alloc_sign_extend(Integer* restrict a, u64 new_digits_size) {
-  if (expect_unlikely(a->digits_size <= new_digits_size)) return a;
-  Integer* result = arena_alloc_flexible(global_arena, Integer, u64, new_digits_size);
-  result->digits_size = new_digits_size;
-  intptr i = 0;
-  do {
-    result->digits[i] = a->digits[i];
-  } while (++i < a->digits_size);
-  u64 sign_extension = result->digits[i - 1] > MAX(i64) ? u64(-1) : 0;
-  do {
-    result->digits[i] = sign_extension;
-  } while (++i < new_digits_size);
-  return result;
-}
-Integer* integer_alloc_add(Integer* restrict a, Integer* restrict b) {
-  u64 max_digits_size = max(a->digits_size, b->digits_size) + 1;
-  // TODO: sign extend on demand instead
-  Integer* left = integer_alloc_sign_extend(a, max_digits_size);
-  Integer* right = integer_alloc_sign_extend(b, max_digits_size);
+Integer integer_alloc_add(Integer a, Integer b) {
+  u64 max_chunks_size = max(a.chunks_size, b.chunks_size) + 1;
+  Integer result = integer_alloc_sign_extend(a, max_chunks_size);
   intptr i = 0;
   u64 carry = 0;
   do {
-    left->digits[i] = add_with_carry(a->digits[i], b->digits[i], carry, &carry);
-  } while (++i < max_digits_size);
-  return left;
+    result.chunks[i] = add_with_carry(result.chunks[i], integer_get_chunk(b, i), carry, &carry);
+  } while (++i < max_chunks_size);
+  return result;
 }
-Integer* integer_alloc_mul(Integer* restrict b) {
+Integer integer_alloc_sub(Integer a, Integer b) {
+  // TODO: faster subtract
+  return integer_alloc_add(a, integer_alloc_negate(b));
+}
+Integer _integer_alloc_karatsuba_mul(Integer a, Integer b) {
+  if (expect_likely(a.chunks_size == 1)) {
+    // TODO: mul128
+    return a;
+  } else {
+    u64 split = a.chunks_size / 2;
+    Integer A = (Integer){a.chunks + split, split};
+    Integer C = (Integer){a.chunks, split};
+    Integer B = (Integer){b.chunks + split, split};
+    Integer D = (Integer){b.chunks, split};
+    Integer ApB = integer_alloc_add(A, B);
+    Integer CpD = integer_alloc_add(C, D);
+    Integer result = _integer_alloc_karatsuba_mul(ApB, CpD);
+    result = integer_alloc_sub(result, _integer_alloc_karatsuba_mul(A, C));
+    result = integer_alloc_sub(result, _integer_alloc_karatsuba_mul(B, D));
+    return result;
+  }
+}
+Integer integer_alloc_mul(Integer a, Integer b) {
+  u64 max_chunks_size = a.chunks_size + b.chunks_size;
+  if (count_ones(u64, max_chunks_size) > 1) {
+    max_chunks_size = 1 << (64 - count_leading_zeros(u64, max_chunks_size));
+  }
+  Integer left = integer_alloc_sign_extend(a, max_chunks_size);
+  Integer right = integer_alloc_sign_extend(b, max_chunks_size);
+  return _integer_alloc_karatsuba_mul(left, right);
+}
+Integer* integer_alloc_div(Integer* restrict a, Integer* restrict b) {
   /* TODO:
-  - alloc(a + b)
-  - sign extend up to that amount
-  - mul via crazy algorithm
+  - alloc(a) x2
+  - make b have opposite sign to a
+  - do long division
   */
   return 0;
 }
