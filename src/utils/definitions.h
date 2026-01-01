@@ -240,6 +240,24 @@ extern void* memset(byte* ptr, int x, Size size) {
 // IWYU pragma: end_exports
 #endif
 
+// VLAs
+#if ARCH_X64
+  #define stack_push(ptr, size) asm( \
+      "sub rsp, %1"                  \
+      "mov %0, rsp"                  \
+      : "=r"(ptr) : "r"(size) : "rsp")
+  #define stack_pop(size) asm("add rsp, %1" ::"r"(size) : "rsp")
+#endif
+#define stack_alloc(t) stack_alloc_array_impl(__COUNTER__, t, 1)
+#define stack_alloc_array(t, count) stack_alloc_array_impl(__COUNTER__, t, count)
+#define stack_alloc_array_impl(C, t, count) ({ \
+  t* VAR(ptr, C);                              \
+  Size VAR(size, C) = sizeof(t) * count;       \
+  stack_push(VAR(ptr, C), VAR(size, C));       \
+  VAR(ptr, C);                                 \
+})
+#define stack_alloc_flexible(t1, t2, count) (t1*)stack_alloc_array_impl(__COUNTER__, byte, sizeof(t1) + sizeof(t2) * count)
+
 // builtins
 #define offsetof(t, d) __builtin_offsetof(t, d)
 #define alignof(x) __alignof__(x)
