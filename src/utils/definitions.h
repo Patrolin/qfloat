@@ -18,7 +18,7 @@ typedef uintptr_t uintptr;
 #define uintptr(x) ((uintptr)(x))
 typedef intptr_t intptr;
 #define intptr(x) ((intptr)(x))
-#define rawptr void*
+#define rawptr void *
 #define Size(x) ((Size)(x))
 typedef enum : uintptr {
   Byte = 1,
@@ -160,21 +160,22 @@ ASSERT(OS_HUGE_PAGE_SIZE == 2 * MebiByte);
 
 // utf8 strings
 typedef struct {
-  byte* ptr;
+  byte *ptr;
   Size size;
 } Bytes;
-#define cstring char*
-#define rcstring readonly char*
+/* NOTE: don't typedef, so that readonly cstring works correctly */
+#define cstring char *
+#define rcstring readonly char *
 #if OS_WINDOWS
-// #define cwstring uint16_t*;
-// #define rcwstring readonly uint16_t*;
+  #define wstring uint16_t *
+  #define rwstring readonly uint16_t *
 #endif
 typedef struct {
-  readonly byte* ptr;
+  readonly byte *ptr;
   Size size;
 } string;
 /* NOTE: we take the pointer of the cstring directly to avoid a memcpy() */
-#define string(const_cstr) ((string){const_cstr, sizeof(const_cstr) - 1})
+#define string(rcstr) ((string){rcstr, sizeof(rcstr) - 1})
 #define str_slice(str, i, j) ((string){&str.ptr[i], i > j ? 0 : Size(j) - Size(i)})
 bool str_equals(string a, string b) {
   if (expect_unlikely(a.size != b.size)) {
@@ -217,46 +218,52 @@ typedef enum : uintptr {
 
 // CRT
 #if NOLIBC
-extern void* memcpy(byte* dest, readonly byte* src, Size size) {
-  byte* dest_end = dest + size;
+extern void *memcpy(byte *dest, readonly byte *src, Size size) {
+  byte *dest_end = dest + size;
   while (dest < dest_end) {
     *(dest++) = *(src++);
   }
   return dest;
 }
-extern void* memset(byte* ptr, int x, Size size) {
+extern void *memset(byte *ptr, int x, Size size) {
   assert(x <= 255);
   byte x_byte = (byte)x;
-  byte* ptr_end = ptr + size;
+  byte *ptr_end = ptr + size;
   while (ptr < ptr_end) {
-    *(byte*)(ptr++) = x_byte;
+    *(byte *)(ptr++) = x_byte;
   }
   return ptr;
 }
 #else
-  // IWYU pragma: begin_exports
+/* IWYU pragma: begin_exports */
   #include <math.h>
   #include <string.h>
-// IWYU pragma: end_exports
+/* IWYU pragma: end_exports */
 #endif
 
-// VLAs
+// stack allocator
 #if ARCH_X64
-  #define stack_push(ptr, size) asm( \
-      "sub rsp, %1"                  \
-      "mov %0, rsp"                  \
-      : "=r"(ptr) : "r"(size) : "rsp")
-  #define stack_pop(size) asm("add rsp, %1" ::"r"(size) : "rsp")
+typedef struct {
+  Size size;
+} StackAllocator;
+  #define stack_push(stack, ptr, size_) \
+    stack.size += size_;                \
+    asm(                                \
+        "sub rsp, %1;"                  \
+        "mov %0, rsp"                   \
+        : "=r"(ptr) : "r"(size_) : "rsp")
+  #define stack_pop(stack) asm("add rsp, %0" ::"r"(stack.size) : "rsp")
 #endif
-#define stack_alloc(t) stack_alloc_array_impl(__COUNTER__, t, 1)
-#define stack_alloc_array(t, count) stack_alloc_array_impl(__COUNTER__, t, count)
-#define stack_alloc_array_impl(C, t, count) ({ \
-  t* VAR(ptr, C);                              \
-  Size VAR(size, C) = sizeof(t) * count;       \
-  stack_push(VAR(ptr, C), VAR(size, C));       \
-  VAR(ptr, C);                                 \
+#define stack_alloc(stack, t) stack_alloc_impl(__COUNTER__, stack, t, sizeof(t), alignof(t) - 1)
+#define stack_alloc_array(stack, t, count) stack_alloc_impl(__COUNTER__, stack, t, sizeof(t) * count, alignof(t) - 1)
+#define stack_alloc_flexible(stack, t1, t2, count) (t1 *)stack_alloc_impl(__COUNTER__, stack, t1, sizeof(t1) + sizeof(t2) * count, alignof(t) - 1)
+#define stack_alloc_impl(C, stack, t, size_, align_mask_) ({                \
+  t *VAR(ptr, C);                                                           \
+  Size VAR(align_mask, C) = align_mask_;                                    \
+  Size VAR(size, C) = (size_) + VAR(align_mask, C);                         \
+  stack_push(stack, VAR(ptr, C), VAR(size, C));                             \
+  (t *)((uintptr)(VAR(ptr, C) + VAR(align_mask, C)) & ~VAR(align_mask, C)); \
 })
-#define stack_alloc_flexible(t1, t2, count) (t1*)stack_alloc_array_impl(__COUNTER__, byte, sizeof(t1) + sizeof(t2) * count)
 
 // builtins
 #define offsetof(t, d) __builtin_offsetof(t, d)
@@ -266,7 +273,7 @@ extern void* memset(byte* ptr, int x, Size size) {
 #define bitcast_impl(C, value, t1, t2) ({ \
   ASSERT(sizeof(t1) == sizeof(t2));       \
   t2 VAR(v, C);                           \
-  *(t1*)((rawptr)(&VAR(v, C))) = value;   \
+  *(t1 *)((rawptr)(&VAR(v, C))) = value;  \
   VAR(v, C);                              \
 })
 #define downcast(t1, v, t2) downcast_impl(__COUNTER__, t1, v, t2)
@@ -429,20 +436,20 @@ ASSERT(__atomic_always_lock_free(8, 0));
 #define sub_overflow(a, b, dest) __builtin_sub_overflow(a, b, dest)
 #define mul_overflow(a, b, dest) __builtin_mul_overflow(a, b, dest)
 #define add_with_carry(a, b, c, carry_dest) _Generic((a), \
-    u64: __builtin_addcll(a, b, c, (void*)carry_dest),    \
-    u32: __builtin_addcl(a, b, c, (void*)carry_dest),     \
-    u16: __builtin_addcs(a, b, c, (void*)carry_dest),     \
-    u8: __builtin_addcb(a, b, c, (void*)carry_dest),      \
-    i64: __builtin_addcll(a, b, c, (void*)carry_dest),    \
-    i32: __builtin_addcl(a, b, c, (void*)carry_dest),     \
-    i16: __builtin_addcs(a, b, c, (void*)carry_dest),     \
-    i8: __builtin_addcb(a, b, c, (void*)carry_dest))
+    u64: __builtin_addcll(a, b, c, (void *)carry_dest),   \
+    u32: __builtin_addcl(a, b, c, (void *)carry_dest),    \
+    u16: __builtin_addcs(a, b, c, (void *)carry_dest),    \
+    u8: __builtin_addcb(a, b, c, (void *)carry_dest),     \
+    i64: __builtin_addcll(a, b, c, (void *)carry_dest),   \
+    i32: __builtin_addcl(a, b, c, (void *)carry_dest),    \
+    i16: __builtin_addcs(a, b, c, (void *)carry_dest),    \
+    i8: __builtin_addcb(a, b, c, (void *)carry_dest))
 #define sub_with_borrow(a, b, c, borrow_dest) _Generic((a), \
-    u64: __builtin_subcll(a, b, c, (void*)borrow_dest),     \
-    u32: __builtin_subcl(a, b, c, (void*)borrow_dest),      \
-    u16: __builtin_subcs(a, b, c, (void*)borrow_dest),      \
-    u8: __builtin_subcb(a, b, c, (void*)borrow_dest),       \
-    i64: __builtin_subcll(a, b, c, (void*)borrow_dest),     \
-    i32: __builtin_subcl(a, b, c, (void*)borrow_dest),      \
-    i16: __builtin_subcs(a, b, c, (void*)borrow_dest),      \
-    i8: __builtin_subcb(a, b, c, (void*)borrow_dest))
+    u64: __builtin_subcll(a, b, c, (void *)borrow_dest),    \
+    u32: __builtin_subcl(a, b, c, (void *)borrow_dest),     \
+    u16: __builtin_subcs(a, b, c, (void *)borrow_dest),     \
+    u8: __builtin_subcb(a, b, c, (void *)borrow_dest),      \
+    i64: __builtin_subcll(a, b, c, (void *)borrow_dest),    \
+    i32: __builtin_subcl(a, b, c, (void *)borrow_dest),     \
+    i16: __builtin_subcs(a, b, c, (void *)borrow_dest),     \
+    i8: __builtin_subcb(a, b, c, (void *)borrow_dest))

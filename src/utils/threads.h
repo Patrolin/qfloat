@@ -4,7 +4,113 @@
 #include "mem.h"
 #include "process.h"
 
-// shared
+// syscalls
+#if OS_WINDOWS
+typedef struct {
+  union {
+    DWORD dwOemId;
+    struct {
+      WORD wProcessorArchitecture;
+      WORD wReserved;
+    } DUMMYSTRUCTNAME;
+  } DUMMYUNIONNAME;
+  DWORD dwPageSize;
+  rawptr lpMinimumApplicationAddress;
+  rawptr lpMaximumApplicationAddress;
+  DWORD *dwActiveProcessorMask;
+  DWORD dwNumberOfProcessors;
+  DWORD dwProcessorType;
+  DWORD dwAllocationGranularity;
+  WORD wProcessorLevel;
+  WORD wProcessorRevision;
+} SYSTEM_INFO;
+typedef DWORD PTHREAD_START_ROUTINE(rawptr param);
+typedef enum : DWORD {
+  STACK_SIZE_PARAM_IS_A_RESERVATION = 0x00010000,
+} CreateThreadFlags;
+DISTINCT(Handle, ThreadHandle);
+
+  #pragma comment(lib, "Synchronization.lib")
+foreign void GetSystemInfo(SYSTEM_INFO *lpSystemInfo);
+foreign ThreadHandle CreateThread(
+    readonly SECURITY_ATTRIBUTES *security,
+    Size stack_size,
+    PTHREAD_START_ROUTINE start_proc,
+    readonly rawptr param,
+    DWORD flags,
+    DWORD *thread_id);
+foreign void WaitOnAddress(volatile rawptr address, readonly rawptr while_value, Size address_size, DWORD timeout);
+foreign void WakeByAddressAll(readonly rawptr address);
+#elif OS_LINUX
+typedef CINT pid_t;
+typedef u64 rlim_t;
+typedef enum : CUINT {
+  RLIMIT_STACK = 3,
+} ResourceType;
+typedef struct {
+  rlim_t rlim_cur;
+  rlim_t rlim_max;
+} rlimit;
+intptr getrlimit(ResourceType key, rlimit *value) {
+  return syscall2(SYS_getrlimit, key, (uintptr)value);
+}
+intptr sched_getaffinity(pid_t pid, Size masks_size, u8 *masks) {
+  return syscall3(SYS_sched_getaffinity, (uintptr)pid, masks_size, (uintptr)masks);
+};
+
+typedef enum : CUINT {
+  CLONE_VM = 1 << 8,
+  CLONE_FS = 1 << 9,
+  CLONE_FILES = 1 << 10,
+  CLONE_SIGHAND = 1 << 11,
+  CLONE_PARENT = 1 << 15,
+  CLONE_THREAD = 1 < 16,
+  CLONE_SYSVSEM = 1 << 18,
+  CLONE_IO = 1 < 31,
+} ThreadFlags;
+typedef enum : u64 {
+  SIGABRT = 6,
+  SIGKILL = 9,
+  SIGCHLD = 17,
+} SignalType;
+// https://nullprogram.com/blog/2023/03/23/
+typedef CUINT _linux_thread_entry(rawptr);
+typedef align(16) struct {
+  _linux_thread_entry *entry;
+  rawptr param;
+} new_thread_data;
+naked intptr newthread(ThreadFlags flags, new_thread_data *stack) {
+  #if ARCH_X64
+  asm volatile(
+      "mov eax, 56\n" // rax = SYS_clone
+      "syscall\n"
+      "mov rdi, [rsp+8]\n"
+      "ret" ::: "rcx", "r11", "memory", "rax", "rdi", "rsi");
+  #else
+  assert(false);
+  #endif
+}
+
+typedef enum : CINT {
+  FUTEX_WAIT = 0,
+  FUTEX_WAKE = 1,
+} FutexOp;
+typedef intptr time_t;
+typedef struct {
+  time_t t_sec;
+  time_t t_nsec;
+} timespec;
+intptr futex_wait(u32 *address, u32 while_value, readonly timespec *timeout) {
+  return syscall4(SYS_futex, (uintptr)address, FUTEX_WAIT, while_value, (uintptr)timeout);
+}
+intptr futex_wake(u32 *address, u32 count_to_wake) {
+  return syscall3(SYS_futex, (uintptr)address, FUTEX_WAKE, count_to_wake);
+}
+#else
+// ASSERT(false);
+#endif
+
+// shared data
 DISTINCT(u32, Thread);
 #define Thread(x) ((Thread)(x))
 typedef align(32) struct {
@@ -23,12 +129,12 @@ ASSERT(sizeof(ThreadInfo) == 32);
 ASSERT(alignof(ThreadInfo) == 32);
 typedef struct {
   u32 logical_core_count;
-  u64* values;
+  u64 *values;
   ThreadInfo thread_infos[];
 } Threads;
 ASSERT(sizeof(Threads) == 32);
 ASSERT(alignof(Threads) == 32);
-global Threads* global_threads;
+global Threads *global_threads;
 
 // entry
 forward_declare void main_multicore(Thread t);
@@ -52,7 +158,7 @@ void _init_threads() {
   logical_core_count = info.dwNumberOfProcessors; /* NOTE: this fails above 64 cores... */
   #elif OS_LINUX
   u8 cpu_masks[64];
-  intptr written_masks_size = sched_getaffinity(0, sizeof(cpu_masks), (u8*)&cpu_masks);
+  intptr written_masks_size = sched_getaffinity(0, sizeof(cpu_masks), (u8 *)&cpu_masks);
   assert(written_masks_size >= 0);
   for (intptr i = 0; i < written_masks_size; i++) {
     logical_core_count += count_ones(u8, cpu_masks[i]);
@@ -65,7 +171,7 @@ void _init_threads() {
   // start threads
   global_threads = arena_alloc_flexible(global_arena, Threads, ThreadInfo, logical_core_count);
   assert(global_threads != 0);
-  u64* values = arena_alloc_array(global_arena, u64, logical_core_count);
+  u64 *values = arena_alloc_array(global_arena, u64, logical_core_count);
   global_threads->logical_core_count = logical_core_count;
   global_threads->values = values;
   for (Thread t = 0; t < logical_core_count; t++) {
@@ -81,9 +187,9 @@ void _init_threads() {
       assert(stack != -1);
   #if ARCH_STACK_DIRECTION == -1
       stack = stack + intptr(stack_size) - intptr(sizeof(new_thread_data));
-      new_thread_data* stack_data = (new_thread_data*)(stack);
+      new_thread_data *stack_data = (new_thread_data *)(stack);
   #else
-      new_thread_data* stack_data = (new_thread_data*)(stack);
+      new_thread_data *stack_data = (new_thread_data *)(stack);
       stack = stack + sizeof(new_thread_data);
   #endif
       stack_data->entry = thread_entry;
@@ -102,16 +208,16 @@ void _init_threads() {
 
 // multi-core
 /* NOTE: wait on address, with a chance to wake up spuriously (including on windows...) */
-void wait_on_address(u32* address, u32 while_value) {
+void wait_on_address(u32 *address, u32 while_value) {
 #if OS_WINDOWS
-  WaitOnAddress(address, &while_value, sizeof(while_value), INFINITE);
+  WaitOnAddress(address, &while_value, sizeof(while_value), TIME_INFINITE);
 #elif OS_LINUX
   futex_wait(address, while_value, 0);
 #else
   assert(false);
 #endif
 }
-void wake_all_on_address(u32* address) {
+void wake_all_on_address(u32 *address) {
 #if OS_WINDOWS
   WakeByAddressAll(address);
 #elif OS_LINUX
@@ -124,7 +230,7 @@ void wake_all_on_address(u32* address) {
 void barrier(Thread t) {
   u32 threads_start = global_threads->thread_infos[t].threads_start;
   u32 threads_end = global_threads->thread_infos[t].threads_end;
-  ThreadInfo* shared_data = &global_threads->thread_infos[threads_start];
+  ThreadInfo *shared_data = &global_threads->thread_infos[threads_start];
   u32 thread_count = threads_end - threads_start;
 
   u32 barrier = atomic_load(&shared_data->barrier);
@@ -148,7 +254,7 @@ void barrier(Thread t) {
 bool single_core(Thread t) {
   u32 threads_start = global_threads->thread_infos[t].threads_start;
   u32 threads_end = global_threads->thread_infos[t].threads_end;
-  ThreadInfo* shared_data = &global_threads->thread_infos[threads_start];
+  ThreadInfo *shared_data = &global_threads->thread_infos[threads_start];
   u32 thread_count = threads_end - threads_start;
 
   bool is_first = atomic_fetch_add(&shared_data->is_first_counter, 1) == 0;
@@ -158,11 +264,11 @@ bool single_core(Thread t) {
   return is_first;
 }
 /* scatter the value from the thread where single_core() returned true, defaulting to the first thread in the group */
-#define barrier_scatter(t, value) barrier_scatter_impl(t, (u64*)(value));
-void barrier_scatter_impl(Thread t, u64* value) {
+#define barrier_scatter(t, value) barrier_scatter_impl(t, (u64 *)(value));
+void barrier_scatter_impl(Thread t, u64 *value) {
   Thread threads_start = global_threads->thread_infos[t].threads_start;
-  ThreadInfo* shared_data = &global_threads->thread_infos[threads_start];
-  u64* shared_value = &global_threads->values[threads_start];
+  ThreadInfo *shared_data = &global_threads->thread_infos[threads_start];
+  u64 *shared_value = &global_threads->values[threads_start];
   /* NOTE: we'd prefer if only the was_first_thread accessed shared_value here */
   if (expect_unlikely(t == shared_data->was_first_thread)) {
     *shared_value = *value;
@@ -173,7 +279,7 @@ void barrier_scatter_impl(Thread t, u64* value) {
 }
 /* gather values from all threads in the current group into a all threads */
 #define barrier_gather(t, value) barrier_gather_impl(t, u64(value))
-ThreadInfo* barrier_gather_impl(Thread t, u64 value) {
+ThreadInfo *barrier_gather_impl(Thread t, u64 value) {
   global_threads->values[t] = value;
   barrier(t); /* NOTE: make sure all threads have written their data */
   return global_threads->thread_infos;
@@ -184,7 +290,7 @@ bool barrier_split_threads(Thread t, u32 n) {
   // inline barrier() + modify threads
   u32 threads_start = global_threads->thread_infos[t].threads_start;
   u32 threads_end = global_threads->thread_infos[t].threads_end;
-  ThreadInfo* shared_data = &global_threads->thread_infos[threads_start];
+  ThreadInfo *shared_data = &global_threads->thread_infos[threads_start];
   u32 thread_count = threads_end - threads_start;
   Thread threads_split = threads_start + n;
   assert(n <= thread_count);
@@ -199,12 +305,12 @@ bool barrier_split_threads(Thread t, u32 n) {
   } else {
     // modify threads
     for (Thread i = threads_start; i < threads_end; i++) {
-      ThreadInfo* thread_data = &global_threads->thread_infos[i];
+      ThreadInfo *thread_data = &global_threads->thread_infos[i];
       /* NOTE: compiler unrolls this 4x */
-      u32* ptr = i < threads_split ? &thread_data->threads_end : &thread_data->threads_start;
+      u32 *ptr = i < threads_split ? &thread_data->threads_end : &thread_data->threads_start;
       *ptr = threads_split;
     }
-    ThreadInfo* split_data = &global_threads->thread_infos[threads_split];
+    ThreadInfo *split_data = &global_threads->thread_infos[threads_split];
     split_data->was_first_thread = threads_split;
     /* NOTE: reset counters in case we have a non-power-of-two number of threads */
     shared_data->is_first_counter = 0;
@@ -218,7 +324,7 @@ bool barrier_split_threads(Thread t, u32 n) {
 void barrier_join_threads(Thread t, Thread threads_start, Thread threads_end) {
   // inline barrier() + modify threads
   assert(t >= threads_start && t < threads_end);
-  ThreadInfo* shared_data = &global_threads->thread_infos[threads_start];
+  ThreadInfo *shared_data = &global_threads->thread_infos[threads_start];
   u32 thread_count = threads_end - threads_start;
   /* NOTE: `thread_count > prev_thread_count`, so we need a separate barrier */
   u32 barrier = atomic_load(&shared_data->join_barrier);
@@ -231,7 +337,7 @@ void barrier_join_threads(Thread t, Thread threads_start, Thread threads_end) {
   } else {
     // modify threads
     for (Thread i = threads_start; i < threads_end; i++) {
-      ThreadInfo* thread_data = &global_threads->thread_infos[i];
+      ThreadInfo *thread_data = &global_threads->thread_infos[i];
       thread_data->threads_start = threads_start;
       thread_data->threads_end = threads_end;
     }

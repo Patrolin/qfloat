@@ -1,6 +1,14 @@
 #pragma once
 #include "definitions.h"
 
+// common
+/* NOTE: everything is a file on linux */
+DISTINCT(CINT, FileHandle);
+DISTINCT(FileHandle, Handle);
+#define INVALID_HANDLE (Handle)(-1)
+// TODO: close_file(), write_to_file()
+
+// errno
 #if NOLIBC
 typedef enum : intptr {
   EPERM = intptr(-1),
@@ -145,6 +153,7 @@ typedef enum : intptr {
 /* IWYU pragma: end_exports */
 #endif
 
+// syscall
 #if ARCH_X64
 intptr syscall1(uintptr id, uintptr a1) {
   /* NOTE: clang asm is retarded, if you did `: "rdi"(1)`, it just wouldn't work... */

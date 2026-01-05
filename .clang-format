@@ -1,5 +1,7 @@
-BasedOnStyle: Google
+BasedOnStyle: LLVM
 IndentWidth: 2
 ColumnLimit: 0
 IndentPPDirectives: BeforeHash
 SortIncludes: Never
+AllowShortIfStatementsOnASingleLine: AllIfsAndElse
+IndentCaseLabels: false

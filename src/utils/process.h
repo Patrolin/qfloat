@@ -4,7 +4,23 @@
 #include "os.h"
 #include "mem.h"
 
+// foreign BOOL WriteFile(FileHandle file, rcstring buffer, DWORD buffer_size, DWORD* bytes_written, rawptr overlapped);
+// intptr write(FileHandle file, rcstring buffer, Size buffer_size) {
+//   return syscall3(SYS_write, (uintptr)file, (uintptr)buffer, buffer_size);
+// }
+
 // init
+#if OS_WINDOWS
+typedef enum : DWORD {
+  CP_UTF8 = 65001,
+} CodePage;
+
+foreign BOOL SetConsoleOutputCP(CodePage code_page);
+#elif OS_LINUX
+#else
+ASSERT(false);
+#endif
+
 void _init_console() {
 #if OS_WINDOWS
   SetConsoleOutputCP(CP_UTF8);
@@ -19,6 +35,14 @@ void _init_shared_arena() {
 }
 
 // exit
+#if OS_WINDOWS
+foreign void ExitProcess(CUINT exit_code);
+#elif OS_LINUX
+Noreturn exit_group(CINT return_code) {
+  syscall1(SYS_exit_group, (uintptr)return_code);
+}
+#endif
+
 Noreturn exit_process(CINT exit_code) {
 #if OS_WINDOWS
   ExitProcess((CUINT)exit_code);
@@ -27,7 +51,8 @@ Noreturn exit_process(CINT exit_code) {
 #else
   ASSERT(false);
 #endif
-  for (;;);
+  for (;;)
+    ;
 }
 Noreturn abort() {
   exit_process(1);
@@ -71,11 +96,55 @@ CINT main() {
 #endif
 
 // build system
+#if OS_WINDOWS
+typedef struct {
+  DWORD cb;
+  rcstring lpReserved;
+  rcstring lpDesktop;
+  rcstring lpTitle;
+  DWORD dwX;
+  DWORD dwY;
+  DWORD dwXSize;
+  DWORD dwYSize;
+  DWORD dwXCountChars;
+  DWORD dwYCountChars;
+  DWORD dwFillAttribute;
+  DWORD dwFlags;
+  WORD wShowWindow;
+  WORD cbReserved2;
+  rawptr lpReserved2;
+  Handle hStdInput;
+  Handle hStdOutput;
+  Handle hStdError;
+} STARTUPINFOA;
+typedef struct {
+  Handle hProcess;
+  Handle hThread;
+  DWORD dwProcessId;
+  DWORD dwThreadId;
+} PROCESS_INFORMATION;
+foreign BOOL CreateProcessA(
+    rcstring application_path,
+    cstring command,
+    readonly SECURITY_ATTRIBUTES *process_security,
+    readonly SECURITY_ATTRIBUTES *thread_security,
+    BOOL inherit_handles,
+    DWORD creation_flags,
+    readonly rawptr env,
+    rcstring current_dir,
+    readonly STARTUPINFOA *startup_info,
+    PROCESS_INFORMATION *process_info);
+foreign BOOL GetExitCodeProcess(Handle hProcess, DWORD *exit_code);
+DISTINCT(Handle, ModuleHandle);
+foreign ModuleHandle LoadLibraryA(rcstring dll_path);
+rawptr GetProcAddress(ModuleHandle module, cstring proc_name);
+#endif
+
 typedef struct {
 #if OS_WINDOWS
-  string* start;
+  string *start;
 #elif OS_LINUX
-  rcstring* start;
+  rcstring *start;
 #endif
   Size count;
 } BuildArgs;
@@ -83,23 +152,23 @@ typedef struct {
 #define arg_alloc2(args, arg1, arg2)  \
   arg_alloc_impl(args, string(arg1)); \
   arg_alloc_impl(args, string(arg2))
-static void arg_alloc_impl(BuildArgs* restrict args, string arg) {
+static void arg_alloc_impl(BuildArgs *restrict args, string arg) {
 #if OS_WINDOWS
-  string* ptr = arena_alloc(global_arena, string);
+  string *ptr = arena_alloc(global_arena, string);
 #elif OS_LINUX
-  rcstring* ptr = arena_alloc(global_arena, rcstring);
+  rcstring *ptr = arena_alloc(global_arena, rcstring);
 #endif
   *ptr = arg;
   args->start = args->start == 0 ? ptr : args->start;
   args->count += 1;
 }
 #define run_process(app, args) run_process_impl(string(app), args)
-static void run_process_impl(readonly string app, readonly BuildArgs* args) {
+static void run_process_impl(readonly string app, readonly BuildArgs *args) {
 #if OS_WINDOWS
   // copy to a single cstring
-  byte* command = (byte*)global_arena->next;
+  byte *command = (byte *)global_arena->next;
   memcpy(command, app.ptr, app.size);
-  byte* next = command + app.size;
+  byte *next = command + app.size;
   if (expect_likely(args != 0)) {
     for (intptr i = 0; i < args->count; i++) {
       string str = args->start[i];
@@ -123,7 +192,7 @@ static void run_process_impl(readonly string app, readonly BuildArgs* args) {
     printfln2(string("err: %, ok: %"), u32, err, bool, ok);
   }
   assert(ok);
-  WaitResult wait_result = WaitForSingleObject(process_info.hProcess, INFINITE);
+  WaitResult wait_result = WaitForSingleObject(process_info.hProcess, TIME_INFINITE);
   assert(wait_result == WAIT_OBJECT_0);
   u32 exit_code;
   GetExitCodeProcess(process_info.hProcess, &exit_code);
@@ -136,5 +205,5 @@ static void run_process_impl(readonly string app, readonly BuildArgs* args) {
   ASSERT(false);
 #endif
   // assert single-threaded
-  atomic_compare_exchange(&global_arena->next, (intptr*)&command, (intptr)command);
+  atomic_compare_exchange(&global_arena->next, (intptr *)&command, (intptr)command);
 }
