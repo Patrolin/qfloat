@@ -19,13 +19,13 @@ typedef uintptr_t uintptr;
 typedef intptr_t intptr;
 #define intptr(x) ((intptr)(x))
 #define rawptr void *
-#define Size(x) ((Size)(x))
 typedef enum : uintptr {
   Byte = 1,
   KibiByte = 1024 * Byte,
   MebiByte = 1024 * KibiByte,
   GibiByte = 1024 * MebiByte,
 } Size;
+#define Size(x) ((Size)(x))
 
 #define MIN(t) CONCAT(MIN_, t)
 #define MAX(t) CONCAT(MAX_, t)

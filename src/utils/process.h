@@ -4,11 +4,6 @@
 #include "os.h"
 #include "mem.h"
 
-// foreign BOOL WriteFile(FileHandle file, rcstring buffer, DWORD buffer_size, DWORD* bytes_written, rawptr overlapped);
-// intptr write(FileHandle file, rcstring buffer, Size buffer_size) {
-//   return syscall3(SYS_write, (uintptr)file, (uintptr)buffer, buffer_size);
-// }
-
 // init
 #if OS_WINDOWS
 typedef enum : DWORD {

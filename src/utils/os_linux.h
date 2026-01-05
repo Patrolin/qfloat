@@ -1,13 +1,6 @@
 #pragma once
 #include "definitions.h"
 
-// common
-/* NOTE: everything is a file on linux */
-DISTINCT(CINT, FileHandle);
-DISTINCT(FileHandle, Handle);
-#define INVALID_HANDLE (Handle)(-1)
-// TODO: close_file(), write_to_file()
-
 // errno
 #if NOLIBC
 typedef enum : intptr {
@@ -153,10 +146,18 @@ typedef enum : intptr {
 /* IWYU pragma: end_exports */
 #endif
 
-// syscall
+// syscalls
+/* NOTE: sign extension is based solely on the type of `a1, ...` */
+#define syscall1(id, a1) syscall1_impl(id, uintptr(a1))
+#define syscall2(id, a1, a2) syscall2_impl(id, uintptr(a1), uintptr(a2))
+#define syscall3(id, a1, a2, a3) syscall3_impl(id, uintptr(a1), uintptr(a2), uintptr(a3))
+#define syscall4(id, a1, a2, a3, a4) syscall4_impl(id, uintptr(a1), uintptr(a2), uintptr(a3), uintptr(a4))
+#define syscall5(id, a1, a2, a3, a4, a5) syscall5_impl(id, uintptr(a1), uintptr(a2), uintptr(a3), uintptr(a4), uintptr(a5))
+#define syscall6(id, a1, a2, a3, a4, a5, a6) syscall6_impl(id, uintptr(a1), uintptr(a2), uintptr(a3), uintptr(a4), uintptr(a5), uintptr(a6))
+
 #if ARCH_X64
-intptr syscall1(uintptr id, uintptr a1) {
-  /* NOTE: clang asm is retarded, if you did `: "rdi"(1)`, it just wouldn't work... */
+static intptr syscall1_impl(uintptr id, uintptr a1) {
+  /* NOTE: clang asm is retarded, if you did `: "rdi"(1)`, it wouldn't work... */
   register uintptr rax asm("rax") = id;
   register uintptr rdi asm("rdi") = a1;
   intptr result;
@@ -166,7 +167,7 @@ intptr syscall1(uintptr id, uintptr a1) {
                : "rcx", "r11", "memory");
   return result;
 }
-intptr syscall2(uintptr id, uintptr a1, uintptr a2) {
+static intptr syscall2_impl(uintptr id, uintptr a1, uintptr a2) {
   register uintptr rax asm("rax") = id;
   register uintptr rdi asm("rdi") = a1;
   register uintptr rsi asm("rsi") = a2;
@@ -177,7 +178,7 @@ intptr syscall2(uintptr id, uintptr a1, uintptr a2) {
                : "rcx", "r11", "memory");
   return result;
 }
-intptr syscall3(uintptr id, uintptr a1, uintptr a2, uintptr a3) {
+static intptr syscall3_impl(uintptr id, uintptr a1, uintptr a2, uintptr a3) {
   register uintptr rax asm("rax") = id;
   register uintptr rdi asm("rdi") = a1;
   register uintptr rsi asm("rsi") = a2;
@@ -189,7 +190,7 @@ intptr syscall3(uintptr id, uintptr a1, uintptr a2, uintptr a3) {
                : "rcx", "r11", "memory");
   return result;
 }
-intptr syscall4(uintptr id, uintptr a1, uintptr a2, uintptr a3, uintptr a4) {
+static intptr syscall4_impl(uintptr id, uintptr a1, uintptr a2, uintptr a3, uintptr a4) {
   register uintptr rax asm("rax") = id;
   register uintptr rdi asm("rdi") = a1;
   register uintptr rsi asm("rsi") = a2;
@@ -202,7 +203,7 @@ intptr syscall4(uintptr id, uintptr a1, uintptr a2, uintptr a3, uintptr a4) {
                : "rcx", "r11", "memory");
   return result;
 }
-intptr syscall5(uintptr id, uintptr a1, uintptr a2, uintptr a3, uintptr a4, uintptr a5) {
+static intptr syscall5_impl(uintptr id, uintptr a1, uintptr a2, uintptr a3, uintptr a4, uintptr a5) {
   register uintptr rax asm("rax") = id;
   register uintptr rdi asm("rdi") = a1;
   register uintptr rsi asm("rsi") = a2;
@@ -216,7 +217,7 @@ intptr syscall5(uintptr id, uintptr a1, uintptr a2, uintptr a3, uintptr a4, uint
                : "rcx", "r11", "memory");
   return result;
 }
-intptr syscall6(uintptr id, uintptr a1, uintptr a2, uintptr a3, uintptr a4, uintptr a5, uintptr a6) {
+static intptr syscall6_impl(uintptr id, uintptr a1, uintptr a2, uintptr a3, uintptr a4, uintptr a5, uintptr a6) {
   register uintptr rax asm("rax") = id;
   register uintptr rdi asm("rdi") = a1;
   register uintptr rsi asm("rsi") = a2;
@@ -600,3 +601,15 @@ typedef enum : uintptr {
   SYS_map_shadow_stack = uintptr(453),
 } Syscall;
 #endif
+
+// common
+/* NOTE: everything is a file on linux */
+DISTINCT(CINT, FileHandle);
+DISTINCT(FileHandle, Handle);
+#define INVALID_HANDLE (Handle)(-1)
+intptr close(FileHandle file) {
+  return syscall1(SYS_close, (uintptr)file);
+}
+intptr write(FileHandle file, rcstring buffer, Size buffer_size) {
+  return syscall3(SYS_write, (uintptr)file, (uintptr)buffer, buffer_size);
+}

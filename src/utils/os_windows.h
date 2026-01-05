@@ -1,7 +1,7 @@
 #pragma once
 #include "definitions.h"
 
-// common
+// types
 typedef CINT BOOL;
 typedef u64 QWORD;
 typedef u32 DWORD;
@@ -12,11 +12,30 @@ typedef u16 WORD;
   #define WINAPI TODO
 #endif
 
+typedef struct {
+  DWORD nLength;
+  rawptr lpSecurityDescriptor;
+  BOOL bInheritHandle;
+} SECURITY_ATTRIBUTES;
+
+#define TIME_INFINITE (DWORD)(-1)
+typedef enum : DWORD {
+  WAIT_OBJECT_0 = 0,
+  WAIT_ABANDONED = 0x80,
+  WAIT_TIMEOUT = 0x102,
+  WAIT_FAILED = -1,
+} WaitResult;
+
+// common
 DISTINCT(uintptr, Handle);
 DISTINCT(Handle, FileHandle);
 #define INVALID_HANDLE (Handle)(-1)
 foreign bool CloseHandle(Handle handle);
 foreign bool WriteFile(FileHandle file, rcstring buffer, DWORD buffer_size, DWORD *bytes_written, rawptr overlapped);
+
+// windows utils
+foreign DWORD GetLastError();
+foreign WaitResult WaitForSingleObject(Handle handle, DWORD milliseconds);
 
 // linker flags
 #if NOLIBC
@@ -29,21 +48,3 @@ foreign bool WriteFile(FileHandle file, rcstring buffer, DWORD buffer_size, DWOR
   #pragma comment(linker, "/SUBSYSTEM:CONSOLE")
 #endif
 #pragma comment(lib, "Kernel32.lib")
-
-// types
-typedef struct {
-  DWORD nLength;
-  rawptr lpSecurityDescriptor;
-  BOOL bInheritHandle;
-} SECURITY_ATTRIBUTES;
-#define TIME_INFINITE (DWORD)(-1)
-typedef enum : DWORD {
-  WAIT_OBJECT_0 = 0,
-  WAIT_ABANDONED = 0x80,
-  WAIT_TIMEOUT = 0x102,
-  WAIT_FAILED = -1,
-} WaitResult;
-
-// utils
-foreign DWORD GetLastError();
-foreign WaitResult WaitForSingleObject(Handle handle, DWORD milliseconds);
