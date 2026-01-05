@@ -1,7 +1,7 @@
 #pragma once
 #include "definitions.h"
-#include "os.h"
 #include "mem.h"
+#include "os.h"
 #include "process.h"
 
 // syscalls
@@ -32,13 +32,12 @@ DISTINCT(Handle, ThreadHandle);
 
   #pragma comment(lib, "Synchronization.lib")
 foreign void GetSystemInfo(SYSTEM_INFO *lpSystemInfo);
-foreign ThreadHandle CreateThread(
-    readonly SECURITY_ATTRIBUTES *security,
-    Size stack_size,
-    PTHREAD_START_ROUTINE start_proc,
-    readonly rawptr param,
-    DWORD flags,
-    DWORD *thread_id);
+foreign ThreadHandle CreateThread(readonly SECURITY_ATTRIBUTES *security,
+                                  Size stack_size,
+                                  PTHREAD_START_ROUTINE start_proc,
+                                  readonly rawptr param,
+                                  DWORD flags,
+                                  DWORD *thread_id);
 foreign void WaitOnAddress(volatile rawptr address, readonly rawptr while_value, Size address_size, DWORD timeout);
 foreign void WakeByAddressAll(readonly rawptr address);
 #elif OS_LINUX
@@ -81,11 +80,10 @@ typedef align(16) struct {
 } new_thread_data;
 naked intptr newthread(ThreadFlags flags, new_thread_data *stack) {
   #if ARCH_X64
-  asm volatile(
-      "mov eax, 56\n" // rax = SYS_clone
-      "syscall\n"
-      "mov rdi, [rsp+8]\n"
-      "ret" ::: "rcx", "r11", "memory", "rax", "rdi", "rsi");
+  asm volatile("mov eax, 56;" // rax = SYS_clone
+               "syscall;"
+               "mov rdi, [rsp+8];"
+               "ret" ::: "rcx", "r11", "memory", "rax", "rdi", "rsi");
   #else
   assert(false);
   #endif

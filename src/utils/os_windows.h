@@ -6,6 +6,10 @@ typedef CINT BOOL;
 typedef u64 QWORD;
 typedef u32 DWORD;
 typedef u16 WORD;
+typedef uint16_t wchar;
+#define wstring  wchar *
+#define rwstring readonly wchar *
+
 #if ARCH_IS_64_BIT
   #define WINAPI
 #elif ARCH_IS_32_BIT

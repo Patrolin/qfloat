@@ -1,5 +1,6 @@
 #pragma once
 #include "definitions.h"
+// OneLineFormatOffRegex: ^(// NOLINT|logger$)
 
 /* IWYU pragma: begin_exports */
 #if OS_WINDOWS
@@ -7,6 +8,6 @@
 #elif OS_LINUX
   #include "os_linux.h"
 #else
-ASSERT(false);
+ASSERT(false); // NOLINT
 #endif
 /* IWYU pragma: end_exports */

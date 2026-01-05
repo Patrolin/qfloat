@@ -1,7 +1,7 @@
 // https://github.com/Patrolin/qfloat
 #pragma once
-#include "stdint.h"
 #include "stdbool.h"
+#include "stdint.h"
 
 typedef uint8_t qfloat_u8;
 typedef uint64_t qfloat_u64;
@@ -22,13 +22,19 @@ _Static_assert(sizeof(qfloat_f64) == 8, "qfloat_f64");
 
 #define QFLOAT_EXPLICIT_MANTISSA_BITS_f64 52
 #define QFLOAT_IMPLICIT_MANTISSA_BITS_f64 53
-#define QFLOAT_EXPONENT_BITS_f64 (64 - IMPLICIT_MANTISSA_BITS_f64)
-/* NOTE: f64 needs at most 17 (integer+fraction) digits: https://www.exploringbinary.com/number-of-digits-required-for-round-trip-conversions/
+#define QFLOAT_EXPONENT_BITS_f64          (64 - IMPLICIT_MANTISSA_BITS_f64)
+/* NOTE: f64 needs at most 17 (integer+fraction) digits:
+   https://www.exploringbinary.com/number-of-digits-required-for-round-trip-conversions/
     Math.ceil(EXPLICIT_MANTISSA_BITS_f64 * Math.log10(2)) + 1 = 17 */
 #define QFLOAT_BASE10_DIGITS_f64 17
-/* NOTE: sign(1) + digits(17) + decimal_point(1) + signed_exponent(5) + null_terminator(1) */
-#define QFLOAT_SIZE_f64 ((qfloat_intptr)(1) + QFLOAT_BASE10_DIGITS_f64 + 1 + 5 + 1)
-typedef qfloat_f64 qfloat_str_to_f64(const char *_Nonnull str, qfloat_intptr str_size, qfloat_intptr start, qfloat_intptr *_Nonnull end);
+/* NOTE: sign(1) + digits(17) + decimal_point(1) + signed_exponent(5) +
+ * null_terminator(1) */
+#define QFLOAT_SIZE_f64 \
+  ((qfloat_intptr)(1) + QFLOAT_BASE10_DIGITS_f64 + 1 + 5 + 1)
+typedef qfloat_f64 qfloat_str_to_f64(const char *_Nonnull str,
+                                     qfloat_intptr str_size,
+                                     qfloat_intptr start,
+                                     qfloat_intptr *_Nonnull end);
 
 // libc
 #if !QFLOAT_NOLIBC
@@ -38,12 +44,15 @@ typedef qfloat_f64 qfloat_str_to_f64(const char *_Nonnull str, qfloat_intptr str
   #include <string.h>
   #define qfloat_copy(ptr, size, dest) memcpy(dest, ptr, size)
 #endif
-qfloat_intptr qfloat_shorten_f64_string(qfloat_f64 value, char buffer[_Nonnull static QFLOAT_SIZE_f64], qfloat_intptr size, qfloat_str_to_f64 str_to_float) {
+qfloat_intptr
+qfloat_shorten_f64_string(qfloat_f64 value, char buffer[_Nonnull static QFLOAT_SIZE_f64], qfloat_intptr size, qfloat_str_to_f64 str_to_float) {
   qfloat_assert(size < QFLOAT_SIZE_f64);
   // preserve "+-inf", "nan"
-  if (size == 0) return size;
+  if (size == 0)
+    return size;
   qfloat_intptr start = buffer[0] == '-' || buffer[0] == '+' ? 1 : 0;
-  if (buffer[start] < '0' || buffer[start] > '9') return size;
+  if (buffer[start] < '0' || buffer[start] > '9')
+    return size;
   // find exponent
   qfloat_intptr exponent_index = 0;
   while (exponent_index < size && buffer[exponent_index] != 'e') {
@@ -59,15 +68,19 @@ qfloat_intptr qfloat_shorten_f64_string(qfloat_f64 value, char buffer[_Nonnull s
     qfloat_u8 carry = 1;
     for (intptr_t j = exponent_index - 2; j >= 0; j--) {
       char c = shortened[j];
-      if (c < '0' || c > '9') continue;
+      if (c < '0' || c > '9')
+        continue;
       qfloat_u8 digit = (c - '0') + carry;
       shortened[j] = '0' + (digit % 10);
       carry = digit >= 10 ? 1 : 0;
     }
-    qfloat_copy(buffer + exponent_index, (qfloat_uintptr)(size - exponent_index), shortened + exponent_index - 1);
+    qfloat_copy(buffer + exponent_index,
+                (qfloat_uintptr)(size - exponent_index),
+                shortened + exponent_index - 1);
     shortened[size - 1] = '\0';
     // if valid transform, copy to original
-    if (str_to_float(shortened, size - 1, 0, &_end) != value) break;
+    if (str_to_float(shortened, size - 1, 0, &_end) != value)
+      break;
     qfloat_copy(shortened, (qfloat_uintptr)size, buffer);
     exponent_index--;
     size--;
@@ -77,10 +90,13 @@ qfloat_intptr qfloat_shorten_f64_string(qfloat_f64 value, char buffer[_Nonnull s
   qfloat_intptr exponent_end = (qfloat_intptr)size;
   qfloat_copy(buffer, (qfloat_uintptr)exponent_index, shortened);
   while (significand_end > 1) {
-    qfloat_copy(buffer + exponent_index, (qfloat_uintptr)(size - exponent_index), shortened + significand_end - 1);
+    qfloat_copy(buffer + exponent_index,
+                (qfloat_uintptr)(size - exponent_index),
+                shortened + significand_end - 1);
     shortened[exponent_end - 1] = '\0';
     // if valid transform, update significand_end
-    if (str_to_float(shortened, exponent_end - 1, 0, &_end) != value) break;
+    if (str_to_float(shortened, exponent_end - 1, 0, &_end) != value)
+      break;
     significand_end--;
     exponent_end--;
   }
@@ -92,7 +108,8 @@ qfloat_intptr qfloat_shorten_f64_string(qfloat_f64 value, char buffer[_Nonnull s
 qfloat_f64 qfloat_str_to_f64_libc(const char *_Nonnull str, qfloat_intptr str_size, qfloat_intptr start, qfloat_intptr *_Nonnull end) {
   return strtod(str, 0);
 }
-qfloat_intptr qfloat_sprint_f64_libc(qfloat_f64 value, char buffer[_Nonnull static QFLOAT_SIZE_f64]) {
+qfloat_intptr
+qfloat_sprint_f64_libc(qfloat_f64 value, char buffer[_Nonnull static QFLOAT_SIZE_f64]) {
   int size = snprintf(buffer, QFLOAT_SIZE_f64, "%.17g", value);
   return qfloat_shorten_f64_string(value, buffer, size, qfloat_str_to_f64_libc);
 }
@@ -111,7 +128,8 @@ inline __attribute__((always_inline)) qfloat_f64 qfloat_fma_f64(qfloat_f64 a, qf
   asm volatile("vfmadd213sd %0, %1, %2" : "+x"(result) : "x"(b), "x"(c));
   return result;
 }
-/* NOTE: these fail (give a slightly incorrect result) for `abs(x) < 1e-303`, but who gives af */
+/* NOTE: these fail (give a slightly incorrect result) for `abs(x) < 1e-303`,
+ * but who gives af */
 typedef struct {
   qfloat_f64 high;
   qfloat_f64 low;
@@ -154,7 +172,8 @@ qfloat_u64 qfloat_parse_u64_decimal(const char *_Nonnull str, qfloat_intptr str_
     qfloat_u64 new_result;
     bool did_overflow = qfloat_mul_overflow(result, 10, &new_result);
     did_overflow |= qfloat_add_overflow(new_result, (qfloat_u64)digit, &new_result);
-    if (digit >= 10 || did_overflow) break;
+    if (digit >= 10 || did_overflow)
+      break;
     result = new_result;
     i++;
   }
@@ -177,7 +196,8 @@ qfloat_i64 qfloat_parse_i64_decimal(const char *_Nonnull str, qfloat_intptr str_
     qfloat_i64 new_result;
     bool did_overflow = qfloat_mul_overflow(result, 10, &new_result);
     did_overflow |= qfloat_add_overflow(new_result, (qfloat_i64)digit, &new_result);
-    if (digit >= 10 || did_overflow) break;
+    if (digit >= 10 || did_overflow)
+      break;
     result = new_result;
     i++;
   }
@@ -191,27 +211,33 @@ qfloat_u64 qfloat_parse_u64_hex(const char *_Nonnull str, qfloat_intptr str_size
     char c = str[i];
     qfloat_u8 digit = 16;
     switch (c) {
-      case '0' ... '9':
-        digit = c - '0';
-        break;
-      case 'a' ... 'f':
-        digit = c - 'a' + 10;
-        break;
-      case 'A' ... 'F':
-        digit = c - 'A' + 10;
-        break;
+    case '0' ... '9': {
+      digit = c - '0';
+    } break;
+    case 'a' ... 'f': {
+      digit = c - 'a' + 10;
+    } break;
+    case 'A' ... 'F': {
+      digit = c - 'A' + 10;
+    } break;
     }
     qfloat_u64 new_result;
     bool did_overflow = qfloat_mul_overflow(result, 16, &new_result);
     did_overflow |= qfloat_add_overflow(new_result, (qfloat_u64)digit, &new_result);
-    if (digit >= 16 || did_overflow) break;
+    if (digit >= 16 || did_overflow)
+      break;
     result = new_result;
     i++;
   }
   *end = i;
   return result;
 }
-qfloat_dd qfloat_parse_f64_significand(const char *_Nonnull str, qfloat_intptr str_size, qfloat_intptr start, qfloat_intptr *_Nonnull end, qfloat_intptr *_Nonnull exponent_offset_ptr) {
+qfloat_dd
+qfloat_parse_f64_significand(const char *_Nonnull str,
+                             qfloat_intptr str_size,
+                             qfloat_intptr start,
+                             qfloat_intptr *_Nonnull end,
+                             qfloat_intptr *_Nonnull exponent_offset_ptr) {
   qfloat_i64 result = 0;
   qfloat_intptr i = start;
   // integer
@@ -222,7 +248,8 @@ qfloat_dd qfloat_parse_f64_significand(const char *_Nonnull str, qfloat_intptr s
   while (i < str_size && nonzero_digits < QFLOAT_BASE10_DIGITS_f64) {
     char digit = str[i] - '0';
     qfloat_i64 new_result = result * 10 + digit;
-    if (digit >= 10) break;
+    if (digit >= 10)
+      break;
     result = new_result;
     nonzero_digits++;
     i++;
@@ -240,7 +267,8 @@ qfloat_dd qfloat_parse_f64_significand(const char *_Nonnull str, qfloat_intptr s
     while (i < str_size && nonzero_digits < QFLOAT_BASE10_DIGITS_f64) {
       char digit = str[i] - '0';
       qfloat_i64 new_result = result * 10 + digit;
-      if (digit >= 10) break;
+      if (digit >= 10)
+        break;
       result = new_result;
       nonzero_digits++;
       exponent_offset--;
@@ -256,35 +284,36 @@ qfloat_dd qfloat_parse_f64_significand(const char *_Nonnull str, qfloat_intptr s
   return result_dd;
 }
 qfloat_f64 SAFE_POWERS_OF_10[23] = {
-    1e0,
-    1e1,
-    1e2,
-    1e3,
-    1e4,
-    1e5,
-    1e6,
-    1e7,
-    1e8,
-    1e9,
-    1e10,
-    1e11,
-    1e12,
-    1e13,
-    1e14,
-    1e15,
-    1e16,
-    1e17,
-    1e18,
-    1e19,
-    1e20,
-    1e21,
-    1e22,
+  1e0,
+  1e1,
+  1e2,
+  1e3,
+  1e4,
+  1e5,
+  1e6,
+  1e7,
+  1e8,
+  1e9,
+  1e10,
+  1e11,
+  1e12,
+  1e13,
+  1e14,
+  1e15,
+  1e16,
+  1e17,
+  1e18,
+  1e19,
+  1e20,
+  1e21,
+  1e22,
 };
 qfloat_f64 qfloat_parse_f64_decimal(const char *_Nonnull str, qfloat_intptr str_size, qfloat_intptr start, qfloat_intptr *_Nonnull end) {
   // sign
   qfloat_intptr i = start;
   bool negative = i < str_size && str[i] == '-';
-  if (negative) i++;
+  if (negative)
+    i++;
   /* TODO: parse inf, nan */
   // significand
   qfloat_intptr exponent_base10;
@@ -310,7 +339,7 @@ qfloat_f64 qfloat_parse_f64_decimal(const char *_Nonnull str, qfloat_intptr str_
     exponent_base10--;
   }
   *end = i;
-  qfloat_f64 x = value.high + value.low;  // TODO: probably just do `qfloat_f64 x = value.high;`?
+  qfloat_f64 x = value.high + value.low; // TODO: probably just do `qfloat_f64 x = value.high;`?
   return negative ? -x : x;
 }
 qfloat_f64 str_to_f64(const char *_Nonnull str, qfloat_intptr str_size, qfloat_intptr start, qfloat_intptr *_Nonnull end) {

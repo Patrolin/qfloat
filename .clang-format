@@ -1,7 +1,31 @@
 BasedOnStyle: LLVM
 IndentWidth: 2
+ContinuationIndentWidth: 2
 ColumnLimit: 0
-IndentPPDirectives: BeforeHash
-SortIncludes: Never
 AllowShortIfStatementsOnASingleLine: AllIfsAndElse
+AlignConsecutiveMacros: Consecutive
+AlignConsecutiveShortCaseStatements:
+  Enabled: true
+AlignOperands: Align
+AlignTrailingComments: Always
+AllowAllArgumentsOnNextLine: true
+AllowAllParametersOfDeclarationOnNextLine: true
+BinPackArguments: false
+BinPackParameters: OnePerLine
+BreakBeforeBinaryOperators: true
+IncludeBlocks: Merge
 IndentCaseLabels: false
+IndentPPDirectives: BeforeHash
+IndentWrappedFunctionNames: true
+KeepEmptyLines:
+  AtStartOfBlock: false
+  AtStartOfFile: false
+LineEnding: LF
+MaxEmptyLinesToKeep: 1
+ReflowComments: IndentOnly
+RemoveEmptyLinesInUnwrappedLines: true
+SortIncludes: Never
+SpaceBeforeParens: ControlStatementsExceptControlMacros
+SpacesBeforeTrailingComments: 1
+StatementAttributeLikeMacros:
+  [global, readonly, restrict, nonnull_, forward_declare, always_inline_, never_inline, foreign, foreign_export, naked, Noreturn]

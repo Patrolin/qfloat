@@ -3,7 +3,8 @@
 #define STB_SPRINTF_IMPLEMENTATION 1
 #include "alternatives/stb_sprintf.h"
 #define LOAD_DLL(dll_path) ModuleHandle module = LoadLibraryA(dll_path)
-#define DLL_IMPORT(module, name) name##_t name = (name##_t)(GetProcAddress(module, #name))
+#define DLL_IMPORT(module, name) \
+  name##_t name = (name##_t)(GetProcAddress(module, #name))
 #include "alternatives/lib_charconv.h" /* IWYU pragma: keep */
 
 #undef assert
@@ -19,13 +20,13 @@ void main_multicore(Thread t) {
   DLL_IMPORT(module, from_chars_f32);
   assert(to_chars_f64 != 0 && to_chars_f32 != 0 && from_chars_f64 != 0 && from_chars_f32 != 0);
   // test qf_parse_u64_decimal()
-  TestGroup* group;
+  TestGroup *group;
   if (test_group(t, &group, string("qf_parse_u64_decimal()"), 1)) {
     TEST(string, u64);
     Test tests[] = {
-        {string("0"), 0},
-        {string("1"), 1},
-        {string("18446744073709551615"), 18446744073709551615ULL},
+      {string("0"), 0},
+      {string("1"), 1},
+      {string("18446744073709551615"), 18446744073709551615ULL},
     };
     for (intptr i = 0; i < countof(tests); i++) {
       Test test = tests[i];
@@ -39,11 +40,11 @@ void main_multicore(Thread t) {
   if (test_group(t, &group, string("qf_parse_i64_decimal()"), 1)) {
     TEST(string, i64);
     Test tests[] = {
-        {string("0"), 0},
-        {string("1"), 1},
-        {string("9223372036854775807"), 9223372036854775807},
-        {string("-9223372036854775808"), (int64_t)9223372036854775808ULL},
-        {string("-9223372036854775808"), -(int64_t)9223372036854775807ULL - 1},
+      {string("0"), 0},
+      {string("1"), 1},
+      {string("9223372036854775807"), 9223372036854775807},
+      {string("-9223372036854775808"), (int64_t)9223372036854775808ULL},
+      {string("-9223372036854775808"), -(int64_t)9223372036854775807ULL - 1},
     };
     for (intptr i = 0; i < countof(tests); i++) {
       Test test = tests[i];
@@ -57,12 +58,12 @@ void main_multicore(Thread t) {
   if (test_group(t, &group, string("qf_parse_u64_hex()"), 1)) {
     TEST(string, u64);
     Test tests[] = {
-        {string("0"), 0},
-        {string("123456"), 0x123456},
-        {string("987654"), 0x987654},
-        {string("abcdef"), 0xABCDEF},
-        {string("FEDCAB"), 0xFEDCAB},
-        {string("FFFFFFFFFFFFFFFF"), 0xFFFFFFFFFFFFFFFF},
+      {string("0"), 0},
+      {string("123456"), 0x123456},
+      {string("987654"), 0x987654},
+      {string("abcdef"), 0xABCDEF},
+      {string("FEDCAB"), 0xFEDCAB},
+      {string("FFFFFFFFFFFFFFFF"), 0xFFFFFFFFFFFFFFFF},
     };
     for (intptr i = 0; i < countof(tests); i++) {
       Test test = tests[i];
@@ -76,12 +77,12 @@ void main_multicore(Thread t) {
   if (test_group(t, &group, string("qf_parse_f64_significand()"), 1)) {
     TEST(string, u64);
     Test tests[] = {
-        {string("0"), 0},
-        {string(".0"), 0},
-        {string("0."), 0},
-        {string("0.0"), 0},
-        {string("654321"), 654321},
-        {string("123456789.01234567"), 12345678901234567},
+      {string("0"), 0},
+      {string(".0"), 0},
+      {string("0."), 0},
+      {string("0.0"), 0},
+      {string("654321"), 654321},
+      {string("123456789.01234567"), 12345678901234567},
     };
     for (intptr i = 0; i < countof(tests); i++) {
       Test test = tests[i];

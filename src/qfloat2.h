@@ -20,12 +20,12 @@
   #endif
   // likely
   #if defined(__clang__) || defined(__GNUC__)
-    #define qf_nonnull(...) __attribute__((nonnull(__VA_ARGS__)))
-    #define qf_likely(condition) __builtin_expect(condition, true)
+    #define qf_nonnull(...)        __attribute__((nonnull(__VA_ARGS__)))
+    #define qf_likely(condition)   __builtin_expect(condition, true)
     #define qf_unlikely(condition) __builtin_expect(condition, false)
   #else
     #define qf_nonnull(...)
-    #define qf_likely(condition) (condition)
+    #define qf_likely(condition)   (condition)
     #define qf_unlikely(condition) (condition)
     #include <intrin.h> /* NOTE: required for overflow in MSVC */
   #endif
@@ -37,12 +37,12 @@
   #define qf_exit(condition) (condition)
   // utils
   #define QF_CONCAT_IMPL(a, b) a##b
-  #define QF_CONCAT(a, b) QF_CONCAT_IMPL(a, b)
+  #define QF_CONCAT(a, b)      QF_CONCAT_IMPL(a, b)
   #define qf_bitcopy(v1, v2)                   \
     QF_ASSERT(sizeof(*(v1)) == sizeof(*(v2))); \
     memcpy(v2, v1, sizeof(*(v1)));
-  #define qf_abs(a) ((a) < 0 ? -(a) : (a))
-  #define qf_min(a, b) ((a) < (b) ? (a) : (b))
+  #define qf_abs(a)                 ((a) < 0 ? -(a) : (a))
+  #define qf_min(a, b)              ((a) < (b) ? (a) : (b))
   #define qf_count_leading_zeros(a) ((typeof(a))__builtin_clzg(a))
 QF_ASSERT(sizeof(char) == 1);
 #endif
@@ -209,32 +209,32 @@ uint64_t qf_nonnull(1, 4, 5) qf_parse_f64_significand(const char *restrict str, 
 // Number Parsing at a Gigabyte per Second (Lemire 2022) https://arxiv.org/pdf/2101.11408
 // TODO: Fast Number Parsing Without Fallback (Lemire 2023) https://arxiv.org/pdf/2212.06644
 /* NOTE: MAX_SAFE_INTEGER_xx = 2^EXPLICIT_MANTISSA_BITS_xx - 1 */
-#define MAX_SAFE_INTEGER_f64 9007199254740991
+#define MAX_SAFE_INTEGER_f64      9007199254740991
 #define MAX_SAFE_POWER_OF_TEN_f64 22
 const qf_f64 SAFE_POWERS_OF_TEN_f64[1 + MAX_SAFE_POWER_OF_TEN_f64] = {
-    1e0,
-    1e1,
-    1e2,
-    1e3,
-    1e4,
-    1e5,
-    1e6,
-    1e7,
-    1e8,
-    1e9,
-    1e10,
-    1e11,
-    1e12,
-    1e13,
-    1e14,
-    1e15,
-    1e16,
-    1e17,
-    1e18,
-    1e19,
-    1e20,
-    1e21,
-    1e22,
+  1e0,
+  1e1,
+  1e2,
+  1e3,
+  1e4,
+  1e5,
+  1e6,
+  1e7,
+  1e8,
+  1e9,
+  1e10,
+  1e11,
+  1e12,
+  1e13,
+  1e14,
+  1e15,
+  1e16,
+  1e17,
+  1e18,
+  1e19,
+  1e20,
+  1e21,
+  1e22,
 };
 qf_f64 qf_parse_f64(const char *restrict str, intptr_t str_size, intptr_t start, intptr_t *restrict end) {
   int32_t exponent_10;

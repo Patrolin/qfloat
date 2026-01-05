@@ -19,7 +19,7 @@ typedef struct {
   u64 test_count;
   u64 fail_count;
 } TestGroup;
-bool nonnull_(2) test_group(Thread t, TestGroup** group, string name, Thread thread_count) {
+bool nonnull_(2) test_group(Thread t, TestGroup **group, string name, Thread thread_count) {
   if (expect_small(t == 0)) {
     *group = arena_alloc(global_arena, TestGroup);
     **group = (TestGroup){.name = name};
@@ -27,7 +27,7 @@ bool nonnull_(2) test_group(Thread t, TestGroup** group, string name, Thread thr
   barrier_scatter(t, group);
   return thread_count == 0 || t < thread_count;
 }
-void test_summary(Thread t, TestGroup* group) {
+void test_summary(Thread t, TestGroup *group) {
   barrier(t); /* NOTE: wait for writes */
   if (expect_small(t == 0)) {
     u64 test_count = group->test_count;
@@ -44,7 +44,7 @@ void test_summary(Thread t, TestGroup* group) {
     t1 in;           \
     t2 out;          \
   } Test(t1, t2)
-#define check(thread, group, condition, t1, v1) check_impl(__COUNTER__, thread, group, condition, t1, v1)
+#define check(thread, group, condition, t1, v1)         check_impl(__COUNTER__, thread, group, condition, t1, v1)
 #define check_impl(C, thread, group, condition, t1, v1) ({                                                          \
   u64 VAR(test_count, C) = atomic_add_fetch(&group->test_count, 1);                                                 \
   if (expect_small(t == 0)) {                                                                                       \
