@@ -1,16 +1,14 @@
 #pragma once
 #include "definitions.h"
 
-#define max(a, b) ((a) > (b) ? (a) : (b))
-
 // Integer slice
 typedef struct {
   /* NOTE: two's complement chunks */
   u64 *chunks;
   u64 chunks_size;
 } Integer;
-#define integer_stack_alloc(stack, size) ((Integer){stack_alloc_array(stack, u64, size), size})
-#define integer_sign_extension(a) (a.chunks[a.chunks_size - 1] >> 63 ? u64(-1) : 0)
+#define integer_stack_alloc(stack, size)        ((Integer){stack_alloc_array(stack, u64, size), size})
+#define integer_sign_extension(a)               (a.chunks[a.chunks_size - 1] >> 63 ? u64(-1) : 0)
 #define integer_get_chunk(a, i, sign_extension) (i < a.chunks_size ? a.chunks[i] : sign_extension)
 
 /* NOTE: we can't use `restrict`, as we sometimes want to do stuff like `x += y` */
@@ -143,7 +141,7 @@ void _integer_karatsuba_mul(Integer *result, Integer a, Integer b) {
     stack_pop(stack);
   }
 }
-#define integer_mul_size(a, b) integer_mul_size_impl(__COUNTER__, a, b)
+#define integer_mul_size(a, b)         integer_mul_size_impl(__COUNTER__, a, b)
 #define integer_mul_size_impl(C, a, b) ({                                                    \
   u64 VAR(max_chunks_size, C) = a.chunks_size + b.chunks_size;                               \
   if (count_ones(u64, VAR(max_chunks_size, C)) > 1) {                                        \
@@ -151,7 +149,7 @@ void _integer_karatsuba_mul(Integer *result, Integer a, Integer b) {
   }                                                                                          \
   VAR(max_chunks_size, C);                                                                   \
 })
-void integer_mul(Integer *result, Integer a, Integer b, u64 size) {
+void integer_mul(Integer *result, u64 size, Integer a, Integer b) {
   StackAllocator stack = {};
   Integer left = integer_stack_alloc(stack, size);
   integer_sign_extend(&left, a);
