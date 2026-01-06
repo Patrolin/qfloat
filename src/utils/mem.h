@@ -2,6 +2,8 @@
 #include "definitions.h"
 #include "os.h"
 
+ASSERT(__BIGGEST_ALIGNMENT__ == 16);
+
 #if OS_WINDOWS
 typedef enum : DWORD {
   EXCEPTION_ACCESS_VIOLATION = 0xC0000005,
@@ -120,9 +122,9 @@ ArenaAllocator *arena_allocator(Bytes buffer) {
   return arena;
 }
 
-#define arena_alloc(arena, t) ((t *)arena_alloc_impl(arena, sizeof(t), alignof(t) - 1))
+#define arena_alloc(arena, t)                      ((t *)arena_alloc_impl(arena, sizeof(t), alignof(t) - 1))
 #define arena_alloc_flexible(arena, t1, t2, count) ((t1 *)arena_alloc_impl(arena, sizeof(t1) + sizeof(t2) * count, alignof(t1) - 1))
-#define arena_alloc_array(arena, t, count) ({                      \
+#define arena_alloc_array(arena, t, count)         ({              \
   ASSERT_MUlTIPLE_OF(sizeof(t), alignof(t));                       \
   (t *)arena_alloc_impl(arena, sizeof(t) * count, alignof(t) - 1); \
 })

@@ -29,3 +29,4 @@ SpaceBeforeParens: ControlStatementsExceptControlMacros
 SpacesBeforeTrailingComments: 1
 StatementAttributeLikeMacros:
   [global, readonly, restrict, nonnull_, forward_declare, always_inline_, never_inline, foreign, foreign_export, naked, Noreturn]
+ForEachMacros: [defer, with]

@@ -115,7 +115,7 @@ ASSERT(OS_HUGE_PAGE_SIZE == 2 * MebiByte);
 #define STR(a)        STR0(a)
 /* NOTE: clang is stupid, and overwrites outer scope variables with the same name,
   so we need macro variables to all have different names... */
-#define VAR(name, counter) CONCAT(__##name, counter)
+#define VAR(name, counter) CONCAT(name##__, counter)
 
 #define IF_1(t, f)     t
 #define IF_0(t, f)     f
@@ -240,55 +240,6 @@ extern void *memset(byte *ptr, int x, Size size) {
 /* IWYU pragma: end_exports */
 #endif
 
-// stack allocator
-#if ARCH_X64
-typedef struct {
-  Size size;
-} StackAllocator;
-  #define stack_push(stack, ptr, size_) \
-    stack.size += size_;                \
-    asm(                                \
-      "sub rsp, %1;"                    \
-      "mov %0, rsp"                     \
-      : "=r"(ptr) : "r"(size_) : "rsp")
-  #define stack_pop(stack) asm("add rsp, %0" ::"r"(stack.size) : "rsp")
-#endif
-// TODO: turn this into a defer-for-loop and update .clang-format, to reduce bugs
-#define stack_alloc(stack, t)                             stack_alloc_impl(__COUNTER__, stack, t, sizeof(t), alignof(t) - 1)
-#define stack_alloc_array(stack, t, count)                stack_alloc_impl(__COUNTER__, stack, t, sizeof(t) * count, alignof(t) - 1)
-#define stack_alloc_flexible(stack, t1, t2, count)        (t1 *)stack_alloc_impl(__COUNTER__, stack, t1, sizeof(t1) + sizeof(t2) * count, alignof(t) - 1)
-#define stack_alloc_impl(C, stack, t, size_, align_mask_) ({                \
-  t *VAR(ptr, C);                                                           \
-  Size VAR(align_mask, C) = align_mask_;                                    \
-  Size VAR(size, C) = (size_) + VAR(align_mask, C);                         \
-  stack_push(stack, VAR(ptr, C), VAR(size, C));                             \
-  (t *)((uintptr)(VAR(ptr, C) + VAR(align_mask, C)) & ~VAR(align_mask, C)); \
-})
-
-// builtins
-#define offsetof(t, d)                 __builtin_offsetof(t, d)
-#define alignof(x)                     __alignof__(x)
-#define countof(x)                     (intptr(sizeof(x)) / intptr(sizeof(x[0])))
-#define bitcast(value, t1, t2)         bitcast_impl(__COUNTER__, value, t1, t2)
-#define bitcast_impl(C, value, t1, t2) ({ \
-  ASSERT(sizeof(t1) == sizeof(t2));       \
-  t2 VAR(v, C);                           \
-  *(t1 *)((rawptr)(&VAR(v, C))) = value;  \
-  VAR(v, C);                              \
-})
-#define downcast(t1, v, t2)         downcast_impl(__COUNTER__, t1, v, t2)
-#define downcast_impl(C, t1, v, t2) ({    \
-  ASSERT(sizeof(t2) < sizeof(t1));        \
-  t1 VAR(v1, C) = v;                      \
-  t2 VAR(v2, C) = (t2)VAR(v1, C);         \
-  assert((t1)(VAR(v2, C)) == VAR(v1, C)); \
-  VAR(v2, C);                             \
-})
-#define saturate(t1, v1, t2) ({    \
-  ASSERT(sizeof(t2) < sizeof(t1)); \
-  (t2)(min(t1, v1, (t1)MAX(t2)));  \
-})
-
 // types
 typedef uint64_t u64;
 #define u64(x) ((u64)(x))
@@ -355,12 +306,42 @@ ASSERT(sizeof(bf16) == 2);
 typedef _Float16 f16;
 ASSERT(sizeof(f16) == 2);
 #endif
-/* NOTE: Windows is dumb */
-#if OS_WINDOWS && NOLIBC
-CINT _fltused = 0;
-#else
-// ASSERT(false);
-#endif
+
+// builtins
+#define countof(x)       (intptr(sizeof(x)) / intptr(sizeof(x[0])))
+#define alignof(x)       __alignof__(x)
+#define alignof_bits(x)  (alignof(x) * 8)
+#define offsetof(t, key) __builtin_offsetof(t, key)
+
+#define stack_alloc(t)                      (t *)__builtin_alloca_with_align(sizeof(t), alignof_bits(t))
+#define stack_alloc_array(t, count)         (t *)__builtin_alloca_with_align(sizeof(t) * count, alignof_bits(t))
+#define stack_alloc_flexible(t1, t2, count) (t1 *)__builtin_alloca_with_align(sizeof(t1) + sizeof(t2) * count, alignof_bits(t))
+
+#define bitcast(value, t1, t2)         bitcast_impl(__COUNTER__, value, t1, t2)
+#define bitcast_impl(C, value, t1, t2) ({ \
+  ASSERT(sizeof(t1) == sizeof(t2));       \
+  t2 VAR(v, C);                           \
+  *(t1 *)((rawptr)(&VAR(v, C))) = value;  \
+  VAR(v, C);                              \
+})
+#define downcast(t1, v, t2)         downcast_impl(__COUNTER__, t1, v, t2)
+#define downcast_impl(C, t1, v, t2) ({    \
+  ASSERT(sizeof(t2) < sizeof(t1));        \
+  t1 VAR(v1, C) = v;                      \
+  t2 VAR(v2, C) = (t2)VAR(v1, C);         \
+  assert((t1)(VAR(v2, C)) == VAR(v1, C)); \
+  VAR(v2, C);                             \
+})
+#define saturate(t1, v1, t2) ({    \
+  ASSERT(sizeof(t2) < sizeof(t1)); \
+  (t2)(min(t1, v1, (t1)MAX(t2)));  \
+})
+/* NOTE: defer is a zero cost abstraction with -O1 or greater on any compiler */
+#define defer(defer_end)           for (bool defer_done__ = 0; !defer_done__; (defer_end), defer_done__ = 1)
+#define with(with_start, with_end) with_impl(__COUNTER__, with_start, with_end)
+#define with_impl(C, with_start, with_end) \
+  bool VAR(with_done, C) = 0;              \
+  for (with_start; !VAR(with_done, C); (with_end), VAR(with_done, C) = 1)
 
 // atomics: https://gcc.gnu.org/onlinedocs/gcc/_005f_005fatomic-Builtins.html
 #define volatile_store(address, value) __atomic_store_n(address, value, __ATOMIC_RELAXED)
@@ -391,47 +372,14 @@ ASSERT(__atomic_always_lock_free(4, 0));
 ASSERT(__atomic_always_lock_free(8, 0));
 
 // bits: https://gcc.gnu.org/onlinedocs/gcc/Bit-Operation-Builtins.html
-// /* AKA log2_floor() */
-// #define find_first_set(t, v) find_first_set_impl(__COUNTER__, t, v)
-// #define find_first_set_impl(C, t, v) ({ \
-//   t VAR(value, C) = v;                  \
-//   (t)(__builtin_ffsg(VAR(value, C)));   \
-// })
-// #define log2_ceil(t, v) log2_ceil_impl(__COUNTER__, t, v)
-// #define log2_ceil_impl(C, t, v) ({                       \
-//   t1 VAR(value, C) = v1;                                 \
-//   VAR(value, C) <= 1 ? 0 : find_first_set((x - 1) << 1); \
-// })
-#define count_leading_zeros(t, v)         count_leading_zeros_impl(__COUNTER__, t, v)
-#define count_leading_zeros_impl(C, t, v) ({ \
-  t VAR(value, C) = v;                       \
-  (t)(__builtin_clzg(VAR(value, C)));        \
-})
-#define count_trailing_zeros(t, v)         count_trailing_zeros_impl(__COUNTER__, t, v)
-#define count_trailing_zeros_impl(C, t, v) ({ \
-  t VAR(value, C) = v;                        \
-  (t)(__builtin_ctzg(VAR(value, C)));         \
-})
-#define count_leading_redundant_sign_bits(t, v)         count_leading_redundant_sign_bits_impl(__COUNTER__, t, v)
-#define count_leading_redundant_sign_bits_impl(C, t, v) ({ \
-  t VAR(value, C) = v;                                     \
-  (t)(__builtin_clrsbg(VAR(value, C)));                    \
-})
-#define count_ones(t, v)         count_ones_impl(__COUNTER__, t, v)
-#define count_ones_impl(C, t, v) ({        \
-  t VAR(value, C) = v;                     \
-  (t)(__builtin_popcountg(VAR(value, C))); \
-})
-#define count_zeros(t, v)         count_zeros_impl(__COUNTER__, t, v)
-#define count_zeros_impl(C, t, v) ({        \
-  t VAR(value, C) = v;                      \
-  (t)(__builtin_popcountg(~VAR(value, C))); \
-})
-#define count_parity(t, v)         count_parity_impl(__COUNTER__, t, v)
-#define count_parity_impl(C, t, v) ({    \
-  t VAR(value, C) = v;                   \
-  (t)(__builtin_parityg(VAR(value, C))); \
-})
+#define find_first_set(t, v)                    (t)(__builtin_ffsg((t)(v)))
+#define find_first_set_ceil(t, v)               (t)(__builtin_ffsg(((t)(v) - 1) << 1))
+#define count_leading_zeros(t, v)               (t)(__builtin_clzg((t)(v)))
+#define count_trailing_zeros(t, v)              (t)(__builtin_ctzg((t)(v)))
+#define count_leading_redundant_sign_bits(t, v) (t)(__builtin_clrsbg((t)(v)))
+#define count_ones(t, v)                        (t)(__builtin_popcountg((t)(v)))
+#define count_zeros(t, v)                       (t)(__builtin_popcountg(~(t)(v)))
+#define count_parity(t, v)                      (t)(__builtin_parityg((t)(v)))
 
 // overflow: https://gcc.gnu.org/onlinedocs/gcc/Integer-Overflow-Builtins.html
 #define add_overflow(a, b, dest)            __builtin_add_overflow(a, b, dest)
