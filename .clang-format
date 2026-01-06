@@ -2,7 +2,6 @@ BasedOnStyle: LLVM
 IndentWidth: 2
 ContinuationIndentWidth: 2
 ColumnLimit: 0
-AllowShortIfStatementsOnASingleLine: AllIfsAndElse
 AlignConsecutiveMacros: Consecutive
 AlignConsecutiveShortCaseStatements:
   Enabled: true
@@ -10,6 +9,12 @@ AlignOperands: Align
 AlignTrailingComments: Always
 AllowAllArgumentsOnNextLine: true
 AllowAllParametersOfDeclarationOnNextLine: true
+AllowShortBlocksOnASingleLine: Always
+AllowShortCaseLabelsOnASingleLine: true
+AllowShortEnumsOnASingleLine: true
+AllowShortFunctionsOnASingleLine: All
+AllowShortIfStatementsOnASingleLine: AllIfsAndElse
+AllowShortLoopsOnASingleLine: true
 BinPackArguments: false
 BinPackParameters: OnePerLine
 BreakBeforeBinaryOperators: true

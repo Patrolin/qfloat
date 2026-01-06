@@ -313,9 +313,11 @@ ASSERT(sizeof(f16) == 2);
 #define alignof_bits(x)  (alignof(x) * 8)
 #define offsetof(t, key) __builtin_offsetof(t, key)
 
-#define stack_alloc(t)                      (t *)__builtin_alloca_with_align(sizeof(t), alignof_bits(t))
-#define stack_alloc_array(t, count)         (t *)__builtin_alloca_with_align(sizeof(t) * count, alignof_bits(t))
-#define stack_alloc_flexible(t1, t2, count) (t1 *)__builtin_alloca_with_align(sizeof(t1) + sizeof(t2) * count, alignof_bits(t))
+/* NOTE: __builtin_alloca() produces 6 instructions the first time, and 3 reusing the same size */
+#define with_stack_allocator(stack)
+#define stack_alloc(stack, t)                      (t *)__builtin_alloca_with_align(sizeof(t), alignof_bits(t))
+#define stack_alloc_array(stack, t, count)         (t *)__builtin_alloca_with_align(sizeof(t) * count, alignof_bits(t))
+#define stack_alloc_flexible(stack, t1, t2, count) (t1 *)__builtin_alloca_with_align(sizeof(t1) + sizeof(t2) * count, alignof_bits(t))
 
 #define bitcast(value, t1, t2)         bitcast_impl(__COUNTER__, value, t1, t2)
 #define bitcast_impl(C, value, t1, t2) ({ \
