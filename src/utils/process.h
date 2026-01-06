@@ -10,7 +10,7 @@ typedef enum : DWORD {
   CP_UTF8 = 65001,
 } CodePage;
 
-foreign BOOL SetConsoleOutputCP(CodePage code_page);
+foreign BOOL WINAPI SetConsoleOutputCP(CodePage code_page);
 #elif OS_LINUX
 #else
 ASSERT(false);
@@ -119,16 +119,16 @@ typedef struct {
   DWORD dwThreadId;
 } PROCESS_INFORMATION;
 foreign BOOL CreateProcessA(
-    rcstring application_path,
-    cstring command,
-    readonly SECURITY_ATTRIBUTES *process_security,
-    readonly SECURITY_ATTRIBUTES *thread_security,
-    BOOL inherit_handles,
-    DWORD creation_flags,
-    readonly rawptr env,
-    rcstring current_dir,
-    readonly STARTUPINFOA *startup_info,
-    PROCESS_INFORMATION *process_info);
+  rcstring application_path,
+  cstring command,
+  readonly SECURITY_ATTRIBUTES *process_security,
+  readonly SECURITY_ATTRIBUTES *thread_security,
+  BOOL inherit_handles,
+  DWORD creation_flags,
+  readonly rawptr env,
+  rcstring current_dir,
+  readonly STARTUPINFOA *startup_info,
+  PROCESS_INFORMATION *process_info);
 foreign BOOL GetExitCodeProcess(Handle hProcess, DWORD *exit_code);
 DISTINCT(Handle, ModuleHandle);
 foreign ModuleHandle LoadLibraryA(rcstring dll_path);
@@ -177,7 +177,7 @@ static void run_process_impl(readonly string app, readonly BuildArgs *args) {
   (*next) = '\0';
   // start new process
   STARTUPINFOA startup_info = {
-      .cb = sizeof(STARTUPINFOA),
+    .cb = sizeof(STARTUPINFOA),
   };
   PROCESS_INFORMATION process_info;
   println(string, command_str);
