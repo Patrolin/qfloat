@@ -12,8 +12,57 @@ typedef struct {
 #define integer_get_chunk(a, i, sign_extension) (i < a.chunks_size ? a.chunks[i] : sign_extension)
 
 /* NOTE: we can't use `restrict`, as we sometimes want to do stuff like `x += y` */
-void integer_sign_extend(Integer *result, Integer a) {
-  /* NOTE: split into two loops, so that optimizer can unroll them */
+void integer_shift_left(Integer *result, Integer a, uintptr shift) {
+  u64 chunks_size = result->chunks_size;
+  // zero
+  intptr i = 0;
+  intptr j = shift / 64;
+  do {
+    result->chunks[i++] = 0;
+  } while (i < j && i < chunks_size);
+  // shift
+  u64 shift_end = min(chunks_size, u64(j) + a.chunks_size);
+  u64 carry = 0;
+  u64 remaining_shift = shift % 64;
+  while (i < shift_end) {
+    // TODO: compiler is not smart enough to simdize this, can we do it ourselves? */
+    u64 a_chunk = a.chunks[j++];
+    result->chunks[i++] = (a_chunk << remaining_shift) | carry;
+    carry = a_chunk >> (64 - remaining_shift);
+  }
+  // sign extend
+  u64 sign_extension = integer_sign_extension(a);
+  while (i < chunks_size) {
+    result->chunks[i++] = sign_extension;
+  }
+}
+void integer_shift_right(Integer *result, Integer a, uintptr shift, bool sign_extend) {
+  u64 chunks_size = result->chunks_size;
+  // sign extend
+  u64 sign_extension = integer_sign_extension(a);
+  if (!sign_extend) { sign_extension = 0; }
+  intptr i = intptr(chunks_size);
+  intptr j = intptr(a.chunks_size - (shift / 64));
+  intptr sign_extend_end = max(j, 0);
+  do {
+    result->chunks[--i] = sign_extension;
+  } while (i > sign_extend_end);
+  // shift
+  u64 remaining_shift = shift % 64;
+  u64 carry = 0;
+  u64 shift_end = j < i ? u64(j - i) : 0;
+  while (i > shift_end) {
+    // TODO: compiler is not smart enough to simdize this, can we do it ourselves? */
+    u64 a_chunk = a.chunks[--j];
+    result->chunks[--i] = carry | (a_chunk >> remaining_shift);
+    carry = a_chunk << (64 - remaining_shift);
+  }
+  // zero
+  while (i > 0) {
+    result->chunks[--i] = 0;
+  }
+}
+void integer_copy(Integer *result, Integer a) {
   // copy
   intptr i = 0;
   u64 chunks_size = a.chunks_size;
@@ -120,7 +169,7 @@ void _integer_karatsuba_mul(Integer *result, Integer a, Integer b) {
       integer_sub(&result_1, result_1, result_0);
       integer_sub(&result_1, result_1, result_2);
       // merge result_0
-      integer_sign_extend(result, result_0);
+      integer_copy(result, result_0);
       // merge result_1
       intptr i = split;
       u64 carry = 0;
@@ -152,9 +201,9 @@ void _integer_karatsuba_mul(Integer *result, Integer a, Integer b) {
 void integer_mul(Integer *result, u64 size, Integer a, Integer b) {
   with_stack_allocator(stack) {
     Integer left = integer_stack_alloc(stack, size);
-    integer_sign_extend(&left, a);
+    integer_copy(&left, a);
     Integer right = integer_stack_alloc(stack, size);
-    integer_sign_extend(&right, b);
+    integer_copy(&right, b);
     _integer_karatsuba_mul(result, left, right);
   }
 }

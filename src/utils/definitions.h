@@ -151,7 +151,8 @@ ASSERT(OS_HUGE_PAGE_SIZE == 2 * MebiByte);
 #define naked    __attribute__((naked))
 #define Noreturn _Noreturn void
 // #define deprecated(msg) __attribute__((deprecated(msg)))
-// other keywords
+
+// expect - do NOT use for loop conditions!
 /* generate code that takes shorter when the condition is true, but longer when the condition is false */
 #define expect_likely(condition) __builtin_expect(condition, true)
 /* generate code that takes shorter when the condition is false, but longer when the condition is true */
@@ -175,7 +176,7 @@ typedef struct {
 } string;
 /* NOTE: we take the pointer of the cstring directly to avoid a memcpy() */
 #define string(rcstr)        ((string){rcstr, sizeof(rcstr) - 1})
-#define str_slice(str, i, j) ((string){&str.ptr[i], i > j ? 0 : Size(j) - Size(i)})
+#define str_slice(str, i, j) ((string){&str.ptr[i], j < i ? 0 : Size(j) - Size(i)})
 bool str_equals(string a, string b) {
   if (expect_unlikely(a.size != b.size)) {
     return false;

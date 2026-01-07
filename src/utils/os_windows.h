@@ -16,8 +16,8 @@ typedef uint16_t wchar;
 #elif ARCH_IS_32_BIT
   #define WINAPI TODO_32_BIT
 #endif
-/* NOTE: Windows is dumb */
 #if NOLIBC
+/* NOTE: Windows is dumb... */
 CINT _fltused = 0;
 #endif
 
