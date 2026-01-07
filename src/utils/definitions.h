@@ -313,7 +313,7 @@ ASSERT(sizeof(f16) == 2);
 #define alignof_bits(x)  (alignof(x) * 8)
 #define offsetof(t, key) __builtin_offsetof(t, key)
 
-/* NOTE: __builtin_alloca() produces 6 instructions the first time, and 3 reusing the same size */
+/* NOTE: __builtin_alloca() produces 6 instructions the first time, or 3 when reusing the same size */
 #define with_stack_allocator(stack)
 #define stack_alloc(stack, t)                      (t *)__builtin_alloca_with_align(sizeof(t), alignof_bits(t))
 #define stack_alloc_array(stack, t, count)         (t *)__builtin_alloca_with_align(sizeof(t) * count, alignof_bits(t))
