@@ -36,8 +36,8 @@
     on other architectures, qf_likely() probably produces more bytecode. */
   #define qf_exit(condition) (condition)
   // utils
-  #define QF_CONCAT_IMPL(a, b) a##b
-  #define QF_CONCAT(a, b)      QF_CONCAT_IMPL(a, b)
+  #define QF_CONCAT_RAW(a, b) a##b
+  #define QF_CONCAT(a, b)     QF_CONCAT_RAW(a, b)
   #define qf_bitcopy(v1, v2)                   \
     QF_ASSERT(sizeof(*(v1)) == sizeof(*(v2))); \
     memcpy(v2, v1, sizeof(*(v1)));

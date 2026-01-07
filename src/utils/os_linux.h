@@ -148,11 +148,11 @@ typedef enum : intptr {
 
 // syscalls
 /* NOTE: sign extension is based solely on the type of `a1, ...` */
-#define syscall1(id, a1) syscall1_impl(id, uintptr(a1))
-#define syscall2(id, a1, a2) syscall2_impl(id, uintptr(a1), uintptr(a2))
-#define syscall3(id, a1, a2, a3) syscall3_impl(id, uintptr(a1), uintptr(a2), uintptr(a3))
-#define syscall4(id, a1, a2, a3, a4) syscall4_impl(id, uintptr(a1), uintptr(a2), uintptr(a3), uintptr(a4))
-#define syscall5(id, a1, a2, a3, a4, a5) syscall5_impl(id, uintptr(a1), uintptr(a2), uintptr(a3), uintptr(a4), uintptr(a5))
+#define syscall1(id, a1)                     syscall1_impl(id, uintptr(a1))
+#define syscall2(id, a1, a2)                 syscall2_impl(id, uintptr(a1), uintptr(a2))
+#define syscall3(id, a1, a2, a3)             syscall3_impl(id, uintptr(a1), uintptr(a2), uintptr(a3))
+#define syscall4(id, a1, a2, a3, a4)         syscall4_impl(id, uintptr(a1), uintptr(a2), uintptr(a3), uintptr(a4))
+#define syscall5(id, a1, a2, a3, a4, a5)     syscall5_impl(id, uintptr(a1), uintptr(a2), uintptr(a3), uintptr(a4), uintptr(a5))
 #define syscall6(id, a1, a2, a3, a4, a5, a6) syscall6_impl(id, uintptr(a1), uintptr(a2), uintptr(a3), uintptr(a4), uintptr(a5), uintptr(a6))
 
 #if ARCH_X64

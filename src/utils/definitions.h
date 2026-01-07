@@ -109,17 +109,18 @@ ASSERT(OS_HUGE_PAGE_SIZE == 2 * MebiByte);
 #endif
 
 // preprocessor helpers
-#define CONCAT0(a, b) a##b
-#define CONCAT(a, b)  CONCAT0(a, b)
-#define STR0(a)       #a
-#define STR(a)        STR0(a)
+#define CONCAT_RAW(a, b) a##b
+#define STR_RAW(a)       #a
+#define EXPAND(x)        x
+#define CONCAT(a, b)     CONCAT_RAW(a, b)
+#define STR(a)           STR_RAW(a)
 /* NOTE: clang is stupid, and overwrites outer scope variables with the same name,
   so we need macro variables to all have different names... */
 #define VAR(name, counter) CONCAT(name##__, counter)
 
-#define IF_1(t, f)     t
-#define IF_0(t, f)     f
-#define IF(cond, t, f) CONCAT(IF_, cond)(t, f)
+#define IF_1(t, f)          t
+#define IF_0(t, f)          f
+#define IF(condition, t, f) CONCAT(IF_, condition)(t, f)
 
 #define PROBE()           1, 1
 #define SECOND(a, b, ...) b

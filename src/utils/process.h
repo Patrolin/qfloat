@@ -46,8 +46,7 @@ Noreturn exit_process(CINT exit_code) {
 #else
   ASSERT(false);
 #endif
-  for (;;)
-    ;
+  for (;;);
 }
 Noreturn abort() {
   exit_process(1);
