@@ -156,6 +156,21 @@ static void arg_alloc_impl(BuildArgs *restrict args, string arg) {
   args->start = args->start == 0 ? ptr : args->start;
   args->count += 1;
 }
+#if BUILD_SYSTEM
+/* NOTE: we need to have the alignment at compile time, so the optimizer can make better decisions */
+uintptr _get_cache_alignment() {
+  #if OS_WINDOWS
+  // TODO: `GetLogicalProcessorInformationEx().Buffer[i].LineSize`
+  uintptr cache_line_size = 0;
+  #elif OS_LINUX
+  ASSERT(false); // TODO: `max(grep cache_alignment /proc/cpuinfo)`
+  #else
+  ASSERT(false);
+  #endif
+  return cache_line_size;
+}
+#endif
+
 #define run_process(app, args) run_process_impl(string(app), args)
 static void run_process_impl(readonly string app, readonly BuildArgs *args) {
 #if OS_WINDOWS
