@@ -135,11 +135,7 @@ rawptr GetProcAddress(ModuleHandle module, cstring proc_name);
 #endif
 
 typedef struct {
-#if OS_WINDOWS
   string *start;
-#elif OS_LINUX
-  rcstring *start;
-#endif
   Size count;
 } BuildArgs;
 #define arg_alloc(args, arg) arg_alloc_impl(args, string(arg))
@@ -147,11 +143,7 @@ typedef struct {
   arg_alloc_impl(args, string(arg1)); \
   arg_alloc_impl(args, string(arg2))
 static void arg_alloc_impl(BuildArgs *restrict args, string arg) {
-#if OS_WINDOWS
   string *ptr = arena_alloc(global_arena, string);
-#elif OS_LINUX
-  rcstring *ptr = arena_alloc(global_arena, rcstring);
-#endif
   *ptr = arg;
   args->start = args->start == 0 ? ptr : args->start;
   args->count += 1;
