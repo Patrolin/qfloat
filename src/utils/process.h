@@ -144,6 +144,7 @@ typedef struct {
   arg_alloc_impl(args, string(arg1)); \
   arg_alloc_impl(args, string(arg2))
 static void arg_alloc_impl(BuildArgs *restrict args, string arg) {
+  /* TODO: maybe just implement a dynamic array? */
   string *ptr = (string *)atomic_fetch_add(&global_arena->next, sizeof(string));
   *ptr = arg;
   args->start = args->start == 0 ? ptr : args->start;
