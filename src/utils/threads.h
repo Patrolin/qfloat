@@ -4,6 +4,12 @@
 #include "os.h"
 #include "process.h"
 
+/* NOTE:
+     blocking = one thread can go to sleep and block all other threads (mutexes)
+    lock-free = one thread is guaranteed to make progress (atomic_add() or atomic_compare_exchange())
+    wait-free = all threads are guaranteed to make progress (wait-free collections)
+*/
+
 // syscalls
 #if OS_WINDOWS
 typedef struct {

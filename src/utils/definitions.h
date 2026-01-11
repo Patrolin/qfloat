@@ -155,8 +155,13 @@ ASSERT(OS_HUGE_PAGE_SIZE == 2 * MebiByte);
 // #define deprecated(msg) __attribute__((deprecated(msg)))
 
 // optimizations
-#define debugger()                     __builtin_debugtrap()
-#define trap()                         __builtin_trap()
+#define debugger() __builtin_debugtrap()
+#define trap()     __builtin_trap()
+#if ARCH_ARM32 || ARCH_ARM64
+  #define cpu_relax() asm volatile("yield")
+#else /* X86, RISCV */
+  #define cpu_relax() asm volatile("pause")
+#endif
 #define cpu_supports(features_cstring) __builtin_cpu_supports(features_cstring)
 #define read_cycle_counter()           __builtin_readcyclecounter()
 #define read_steady_counter()          __builtin_readsteadycounter()

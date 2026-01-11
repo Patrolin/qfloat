@@ -2,7 +2,14 @@
 #include "definitions.h"
 #include "os.h"
 
+// TODO: do we care?, or do we just align to cache line?
+#if ARCH_IS_64_BIT
 ASSERT(__BIGGEST_ALIGNMENT__ == 16);
+#elif ARCH_IS_32_BIT
+ASSERT(__BIGGEST_ALIGNMENT__ == 8);
+#else
+ASSERT(false);
+#endif
 
 #if OS_WINDOWS
 typedef enum : DWORD {
