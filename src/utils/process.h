@@ -33,12 +33,12 @@ void _init_shared_arena() {
 #if OS_WINDOWS
 foreign void ExitProcess(CUINT exit_code);
 #elif OS_LINUX
-Noreturn exit_group(CINT return_code) {
+noreturn_ exit_group(CINT return_code) {
   syscall1(SYS_exit_group, (uintptr)return_code);
 }
 #endif
 
-Noreturn exit_process(CINT exit_code) {
+noreturn_ exit_process(CINT exit_code) {
 #if OS_WINDOWS
   ExitProcess((CUINT)exit_code);
 #elif OS_LINUX
@@ -48,7 +48,8 @@ Noreturn exit_process(CINT exit_code) {
 #endif
   for (;;);
 }
-Noreturn abort() {
+noreturn_ abort() {
+  // TODO: maybe just use `trap()`?
   exit_process(1);
 }
 
@@ -58,7 +59,7 @@ forward_declare void main_singlecore();
 #else
 forward_declare void _init_threads();
 #endif
-Noreturn _init_process() {
+noreturn_ _init_process() {
 #if OS_WINDOWS && NOLIBC
   asm volatile("" ::"m"(_fltused));
 #endif
@@ -80,7 +81,7 @@ Noreturn _init_process() {
   #else
 ASSERT(false);
   #endif
-naked Noreturn _start() {
+naked noreturn_ _start() {
   _start_impl();
 }
 #else

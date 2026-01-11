@@ -128,7 +128,7 @@ ASSERT(alignof(ThreadInfo) == 32);
 typedef struct {
   u32 logical_core_count;
   u64 *values;
-  ThreadInfo thread_infos[];
+  ThreadInfo thread_infos[] flexible(logical_core_count);
 } Threads;
 ASSERT(sizeof(Threads) == 32);
 ASSERT(alignof(Threads) == 32);

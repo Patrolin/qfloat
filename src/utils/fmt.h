@@ -397,3 +397,5 @@ void print_string(string str) {
   string VAR(msg, C) = sprint_to_string(VAR(ptr_end, C), VAR(size, C));                          \
   print_string(VAR(msg, C));                                                                     \
 })
+
+// TODO: maybe use __builtin_dump_struct() for structs?

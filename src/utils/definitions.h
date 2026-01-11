@@ -149,11 +149,20 @@ ASSERT(OS_HUGE_PAGE_SIZE == 2 * MebiByte);
   #define foreign_export __declspec(dllexport)
 #endif
 // #define stdcall __attribute__((__stdcall__))
-#define naked    __attribute__((naked))
-#define Noreturn _Noreturn void
+#define naked         __attribute__((naked))
+#define noreturn_     _Noreturn void
+#define flexible(key) __attribute__((counted_by(key)))
 // #define deprecated(msg) __attribute__((deprecated(msg)))
 
-// expect - do NOT use for loop conditions!
+// optimizations
+#define debugger()                     __builtin_debugtrap()
+#define trap()                         __builtin_trap()
+#define cpu_supports(features_cstring) __builtin_cpu_supports(features_cstring)
+#define read_cycle_counter()           __builtin_readcyclecounter()
+#define read_steady_counter()          __builtin_readsteadycounter()
+/** NOTE: PrefetchMode :: enum {Read, Write, ReadWrite} */
+#define prefetch(ptr, mode, locality) __builtin_prefetch(ptr, mode, locality)
+/* do NOT use expect_xx() for loop conditions */
 /* generate code that takes shorter when the condition is true, but longer when the condition is false */
 #define expect_likely(condition) __builtin_expect(condition, true)
 /* generate code that takes shorter when the condition is false, but longer when the condition is true */
@@ -162,6 +171,10 @@ ASSERT(OS_HUGE_PAGE_SIZE == 2 * MebiByte);
 #define expect_small(condition) expect_likely(condition)
 /* NOTE: When there are `break` or `return` statements, let the compiler decide. */
 #define expect_exit(condition) (condition)
+/* TODO: when to use? */
+#define expect_unpredictable(condition) __builtin_unpredictable(condition)
+#define assume(condition)               __builtin_assume(condition)
+#define assume_noalias(ptr1, ptr2)      __builtin_assume_separate_storage(ptr1, ptr2)
 
 // utf8 strings
 typedef struct {
@@ -191,7 +204,7 @@ bool str_equals(string a, string b) {
 }
 
 // assert
-forward_declare Noreturn abort();
+forward_declare noreturn_ abort();
 forward_declare void fprint(uintptr file, string str);
 #if OS_WINDOWS
 typedef enum : uintptr {
@@ -309,7 +322,7 @@ typedef _Float16 f16;
 ASSERT(sizeof(f16) == 2);
 #endif
 
-// builtins
+// builtins - https://clang.llvm.org/docs/LanguageExtensions.html#builtin-functions
 #define countof(x)       (intptr(sizeof(x)) / intptr(sizeof(x[0])))
 #define alignof(x)       __alignof__(x)
 #define alignof_bits(x)  (alignof(x) * 8)
@@ -348,28 +361,28 @@ ASSERT(sizeof(f16) == 2);
   for (with_start; !VAR(with_done, C); (with_end), VAR(with_done, C) = 1)
 
 // atomics: https://gcc.gnu.org/onlinedocs/gcc/_005f_005fatomic-Builtins.html
-#define volatile_store(address, value) __atomic_store_n(address, value, __ATOMIC_RELAXED)
-#define volatile_load(address)         __atomic_load_n(address, __ATOMIC_RELAXED)
+#define volatile_store(ptr, value) __atomic_store_n(ptr, value, __ATOMIC_RELAXED)
+#define volatile_load(ptr)         __atomic_load_n(ptr, __ATOMIC_RELAXED)
 // #define compiler_fence() __atomic_signal_fence(__ATOMIC_SEQ_CST)
 #define memory_fence() __atomic_thread_fence(__ATOMIC_SEQ_CST)
 
-#define atomic_store(address, value)                           __atomic_store_n(address, value, __ATOMIC_SEQ_CST)
-#define atomic_load(address)                                   __atomic_load_n(address, __ATOMIC_SEQ_CST)
-#define atomic_exchange(address, value)                        __atomic_exchange_n(address, value, __ATOMIC_SEQ_CST)
-#define atomic_compare_exchange(address, expected, value)      __atomic_compare_exchange_n(address, expected, value, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST)
-#define atomic_compare_exchange_weak(address, expected, value) __atomic_compare_exchange_n(address, expected, value, true, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST)
-#define atomic_fetch_add(address, value)                       __atomic_fetch_add(address, value, __ATOMIC_SEQ_CST)
-#define atomic_add_fetch(address, value)                       __atomic_add_fetch(address, value, __ATOMIC_SEQ_CST)
-#define atomic_fetch_sub(address, value)                       __atomic_fetch_sub(address, value, __ATOMIC_SEQ_CST)
-#define atomic_sub_fetch(address, value)                       __atomic_sub_fetch(address, value, __ATOMIC_SEQ_CST)
-#define atomic_fetch_and(address, value)                       __atomic_fetch_and(address, value, __ATOMIC_SEQ_CST)
-#define atomic_and_fetch(address, value)                       __atomic_and_fetch(address, value, __ATOMIC_SEQ_CST)
-#define atomic_fetch_or(address, value)                        __atomic_fetch_or(address, value, __ATOMIC_SEQ_CST)
-#define atomic_or_fetch(address, value)                        __atomic_or_fetch(address, value, __ATOMIC_SEQ_CST)
-#define atomic_fetch_xor(address, value)                       __atomic_fetch_xor(address, value, __ATOMIC_SEQ_CST)
-#define atomic_xor_fetch(address, value)                       __atomic_xor_fetch(address, value, __ATOMIC_SEQ_CST)
-#define atomic_fetch_nand(address, value)                      __atomic_fetch_nand(address, value, __ATOMIC_SEQ_CST)
-#define atomic_nand_fetch(address, value)                      __atomic_nand_fetch(address, value, __ATOMIC_SEQ_CST)
+#define atomic_store(ptr, value)                           __atomic_store_n(ptr, value, __ATOMIC_SEQ_CST)
+#define atomic_load(ptr)                                   __atomic_load_n(ptr, __ATOMIC_SEQ_CST)
+#define atomic_exchange(ptr, value)                        __atomic_exchange_n(ptr, value, __ATOMIC_SEQ_CST)
+#define atomic_compare_exchange(ptr, expected, value)      __atomic_compare_exchange_n(ptr, expected, value, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST)
+#define atomic_compare_exchange_weak(ptr, expected, value) __atomic_compare_exchange_n(ptr, expected, value, true, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST)
+#define atomic_fetch_add(ptr, value)                       __atomic_fetch_add(ptr, value, __ATOMIC_SEQ_CST)
+#define atomic_add_fetch(ptr, value)                       __atomic_add_fetch(ptr, value, __ATOMIC_SEQ_CST)
+#define atomic_fetch_sub(ptr, value)                       __atomic_fetch_sub(ptr, value, __ATOMIC_SEQ_CST)
+#define atomic_sub_fetch(ptr, value)                       __atomic_sub_fetch(ptr, value, __ATOMIC_SEQ_CST)
+#define atomic_fetch_and(ptr, value)                       __atomic_fetch_and(ptr, value, __ATOMIC_SEQ_CST)
+#define atomic_and_fetch(ptr, value)                       __atomic_and_fetch(ptr, value, __ATOMIC_SEQ_CST)
+#define atomic_fetch_or(ptr, value)                        __atomic_fetch_or(ptr, value, __ATOMIC_SEQ_CST)
+#define atomic_or_fetch(ptr, value)                        __atomic_or_fetch(ptr, value, __ATOMIC_SEQ_CST)
+#define atomic_fetch_xor(ptr, value)                       __atomic_fetch_xor(ptr, value, __ATOMIC_SEQ_CST)
+#define atomic_xor_fetch(ptr, value)                       __atomic_xor_fetch(ptr, value, __ATOMIC_SEQ_CST)
+#define atomic_fetch_nand(ptr, value)                      __atomic_fetch_nand(ptr, value, __ATOMIC_SEQ_CST)
+#define atomic_nand_fetch(ptr, value)                      __atomic_nand_fetch(ptr, value, __ATOMIC_SEQ_CST)
 ASSERT(__atomic_always_lock_free(1, 0));
 ASSERT(__atomic_always_lock_free(2, 0));
 ASSERT(__atomic_always_lock_free(4, 0));
