@@ -5,8 +5,8 @@
 #include <stdio.h>
 
 void main_multicore(Thread t) {
-  u64* runs_ptr;
-  u64* succeeded_ptr;
+  u64 *runs_ptr;
+  u64 *succeeded_ptr;
   if (single_core(t)) {
     runs_ptr = arena_alloc(global_arena, u64);
     succeeded_ptr = arena_alloc(global_arena, u64);
@@ -42,7 +42,7 @@ void main_multicore(Thread t) {
       intptr _end;
       new_value = qfloat_str_to_f64_libc(buffer, size, 0, &_end);
       ok &= new_value == value_f64 || isnan(value_f64);
-      if (expect_small(!ok)) {
+      if (expect_near(!ok)) {
         string s1 = (string){debug_buffer, Size(debug_size)};
         string s2 = (string){buffer, Size(size)};
         printfln4(string("\n% -> %  // libc\n% -> %  // libc shortened"), string, s1, hex, value, string, s2, hex, bitcast(new_value, f64, u64));
@@ -53,7 +53,7 @@ void main_multicore(Thread t) {
       size = sprint_f64(value_f64, buffer);
       new_value = str_to_f64(buffer, size, 0, &_end);
       ok &= new_value == value_f64 || isnan(value_f64);
-      if (expect_small(!ok)) {
+      if (expect_near(!ok)) {
         string s1 = (string){debug_buffer, Size(debug_size)};
         string s2 = (string){buffer, Size(size)};
         printfln4(string("\n% -> %  // libc\n% -> %  // nolibc shortened"), string, s1, hex, value, string, s2, hex, bitcast(new_value, f64, u64));
@@ -62,7 +62,7 @@ void main_multicore(Thread t) {
       // test sprint_f64() x strtod()
       new_value = qfloat_str_to_f64_libc(buffer, size, 0, &_end);
       ok &= new_value == value_f64 || isnan(value_f64);
-      if (expect_small(!ok)) {
+      if (expect_near(!ok)) {
         printfln1(string("\nv: %"), hex, value);
         string s1 = (string){debug_buffer, Size(debug_size)};
         string s2 = (string){buffer, Size(size)};

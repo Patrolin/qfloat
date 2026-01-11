@@ -63,9 +63,9 @@ typedef enum : CUINT {
   CLONE_FILES = 1 << 10,
   CLONE_SIGHAND = 1 << 11,
   CLONE_PARENT = 1 << 15,
-  CLONE_THREAD = 1 < 16,
+  CLONE_THREAD = 1 << 16,
   CLONE_SYSVSEM = 1 << 18,
-  CLONE_IO = 1 < 31,
+  CLONE_IO = 1 << 31,
 } ThreadFlags;
 typedef enum : u64 {
   SIGABRT = 6,
@@ -174,7 +174,7 @@ void _init_threads() {
   global_threads->values = values;
   for (Thread t = 0; t < logical_core_count; t++) {
     global_threads->thread_infos[t].threads_end = logical_core_count;
-    if (expect_likely(t > 0)) {
+    if (expect_near(t > 0)) {
 #if OS_WINDOWS
       assert(CreateThread(0, 0, thread_entry, (rawptr)uintptr(t), STACK_SIZE_PARAM_IS_A_RESERVATION, 0) != 0);
 #elif OS_LINUX
@@ -234,7 +234,7 @@ void barrier(Thread t) {
   u32 barrier = atomic_load(&shared_data->barrier);
   u32 barrier_stop = barrier + thread_count;
   u32 barrier_counter = atomic_add_fetch(&shared_data->barrier_counter, 1);
-  if (expect_likely(barrier_counter != barrier_stop)) {
+  if (expect_near(barrier_counter != barrier_stop)) {
     /* NOTE: On windows, WaitOnAddress() "is allowed to return for other reasons", same thing with futex() on linux */
     while (atomic_load(&shared_data->barrier) == barrier) {
       wait_on_address(&shared_data->barrier, barrier);
@@ -256,7 +256,7 @@ bool single_core(Thread t) {
   u32 thread_count = threads_end - threads_start;
 
   bool is_first = atomic_fetch_add(&shared_data->is_first_counter, 1) == 0;
-  if (expect_small(is_first)) {
+  if (expect_near(is_first)) {
     shared_data->was_first_thread = t;
   }
   return is_first;
@@ -268,7 +268,7 @@ void barrier_scatter_impl(Thread t, u64 *value) {
   ThreadInfo *shared_data = &global_threads->thread_infos[threads_start];
   u64 *shared_value = &global_threads->values[threads_start];
   /* NOTE: we'd prefer if only the was_first_thread accessed shared_value here */
-  if (expect_unlikely(t == shared_data->was_first_thread)) {
+  if (expect_near(t == shared_data->was_first_thread)) {
     *shared_value = *value;
   }
   barrier(t); /* NOTE: make sure the scatter thread has written the data */
@@ -296,7 +296,7 @@ bool barrier_split_threads(Thread t, u32 n) {
   u32 barrier = atomic_load(&shared_data->barrier);
   u32 barrier_stop = barrier + thread_count;
   u32 barrier_counter = atomic_add_fetch(&shared_data->barrier_counter, 1);
-  if (expect_likely(barrier_counter != barrier_stop)) {
+  if (expect_near(barrier_counter != barrier_stop)) {
     while (atomic_load(&shared_data->barrier) == barrier) {
       wait_on_address(&shared_data->barrier, barrier);
     }
@@ -328,7 +328,7 @@ void barrier_join_threads(Thread t, Thread threads_start, Thread threads_end) {
   u32 barrier = atomic_load(&shared_data->join_barrier);
   u32 barrier_stop = barrier + thread_count;
   u32 barrier_counter = atomic_add_fetch(&shared_data->join_barrier_counter, 1);
-  if (expect_likely(barrier_counter != barrier_stop)) {
+  if (expect_near(barrier_counter != barrier_stop)) {
     while (atomic_load(&shared_data->join_barrier) == barrier) {
       wait_on_address(&shared_data->join_barrier, barrier);
     }

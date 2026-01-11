@@ -16,7 +16,7 @@ void fprint(FileHandle file, string str) {
 #else
   abort();
 #endif
-  if (expect_unlikely(bytes_written != str.size)) {
+  if (expect_far(bytes_written != str.size)) {
     abort();
   }
 }
@@ -87,7 +87,7 @@ Size sprint_i64(i64 value, byte *buffer_end) {
   assert(false); /* TODO: print first digit here */
   u64 value_abs = u64(llabs(value));
   Size size = sprint_u64(value_abs, buffer_end);
-  if (expect_small(value < 0)) {
+  if (expect_near(value < 0)) {
     *(buffer_end - size - 1) = '-';
     size += 1;
   }
@@ -161,7 +161,7 @@ Size sprint_intptr(intptr value, byte *buffer_end) {
   intptr VAR(j, C) = VAR(i, C);                                                \
   while (VAR(i, C) > 0) {                                                      \
     (VAR(i, C)--);                                                             \
-    if (expect_unlikely(VAR(fmt, C).ptr[VAR(i, C)] == '%')) {                  \
+    if (expect_far(VAR(fmt, C).ptr[VAR(i, C)] == '%')) {                       \
       string VAR(after, C) = str_slice(VAR(fmt, C), VAR(i, C) + 1, VAR(j, C)); \
       VAR(size, C) += sprint(string, VAR(after, C), ptr_end);                  \
       VAR(j, C) = VAR(i, C);                                                   \
@@ -169,7 +169,7 @@ Size sprint_intptr(intptr value, byte *buffer_end) {
       break;                                                                   \
     }                                                                          \
   }                                                                            \
-  if (expect_small(VAR(j, C) > 0)) {                                           \
+  if (expect_near(VAR(j, C) > 0)) {                                            \
     string VAR(before, C) = str_slice(VAR(fmt, C), 0, VAR(j, C));              \
     VAR(size, C) += sprint(string, VAR(before, C), ptr_end - VAR(size, C));    \
   }                                                                            \
@@ -183,7 +183,7 @@ Size sprint_intptr(intptr value, byte *buffer_end) {
   intptr VAR(j, C) = VAR(i, C);                                                \
   while (VAR(i, C) > 0) {                                                      \
     (VAR(i, C)--);                                                             \
-    if (expect_unlikely(VAR(fmt, C).ptr[VAR(i, C)] == '%')) {                  \
+    if (expect_far(VAR(fmt, C).ptr[VAR(i, C)] == '%')) {                       \
       string VAR(after, C) = str_slice(VAR(fmt, C), VAR(i, C) + 1, VAR(j, C)); \
       VAR(size, C) += sprint(string, VAR(after, C), ptr_end);                  \
       VAR(j, C) = VAR(i, C);                                                   \
@@ -193,7 +193,7 @@ Size sprint_intptr(intptr value, byte *buffer_end) {
   }                                                                            \
   while (VAR(i, C) > 0) {                                                      \
     (VAR(i, C)--);                                                             \
-    if (expect_unlikely(VAR(fmt, C).ptr[VAR(i, C)] == '%')) {                  \
+    if (expect_far(VAR(fmt, C).ptr[VAR(i, C)] == '%')) {                       \
       string VAR(after, C) = str_slice(VAR(fmt, C), VAR(i, C) + 1, VAR(j, C)); \
       VAR(size, C) += sprint(string, VAR(after, C), ptr_end - VAR(size, C));   \
       VAR(j, C) = VAR(i, C);                                                   \
@@ -201,7 +201,7 @@ Size sprint_intptr(intptr value, byte *buffer_end) {
       break;                                                                   \
     }                                                                          \
   }                                                                            \
-  if (expect_small(VAR(j, C) > 0)) {                                           \
+  if (expect_near(VAR(j, C) > 0)) {                                            \
     string VAR(before, C) = str_slice(VAR(fmt, C), 0, VAR(j, C));              \
     VAR(size, C) += sprint(string, VAR(before, C), ptr_end - VAR(size, C));    \
   }                                                                            \
@@ -215,7 +215,7 @@ Size sprint_intptr(intptr value, byte *buffer_end) {
   intptr VAR(j, C) = VAR(i, C);                                                \
   while (VAR(i, C) > 0) {                                                      \
     (VAR(i, C)--);                                                             \
-    if (expect_unlikely(VAR(fmt, C).ptr[VAR(i, C)] == '%')) {                  \
+    if (expect_far(VAR(fmt, C).ptr[VAR(i, C)] == '%')) {                       \
       string VAR(after, C) = str_slice(VAR(fmt, C), VAR(i, C) + 1, VAR(j, C)); \
       VAR(size, C) += sprint(string, VAR(after, C), ptr_end);                  \
       VAR(j, C) = VAR(i, C);                                                   \
@@ -225,7 +225,7 @@ Size sprint_intptr(intptr value, byte *buffer_end) {
   }                                                                            \
   while (VAR(i, C) > 0) {                                                      \
     (VAR(i, C)--);                                                             \
-    if (expect_unlikely(VAR(fmt, C).ptr[VAR(i, C)] == '%')) {                  \
+    if (expect_far(VAR(fmt, C).ptr[VAR(i, C)] == '%')) {                       \
       string VAR(after, C) = str_slice(VAR(fmt, C), VAR(i, C) + 1, VAR(j, C)); \
       VAR(size, C) += sprint(string, VAR(after, C), ptr_end - VAR(size, C));   \
       VAR(j, C) = VAR(i, C);                                                   \
@@ -235,7 +235,7 @@ Size sprint_intptr(intptr value, byte *buffer_end) {
   }                                                                            \
   while (VAR(i, C) > 0) {                                                      \
     (VAR(i, C)--);                                                             \
-    if (expect_unlikely(VAR(fmt, C).ptr[VAR(i, C)] == '%')) {                  \
+    if (expect_far(VAR(fmt, C).ptr[VAR(i, C)] == '%')) {                       \
       string VAR(after, C) = str_slice(VAR(fmt, C), VAR(i, C) + 1, VAR(j, C)); \
       VAR(size, C) += sprint(string, VAR(after, C), ptr_end - VAR(size, C));   \
       VAR(j, C) = VAR(i, C);                                                   \
@@ -243,7 +243,7 @@ Size sprint_intptr(intptr value, byte *buffer_end) {
       break;                                                                   \
     }                                                                          \
   }                                                                            \
-  if (expect_small(VAR(j, C) > 0)) {                                           \
+  if (expect_near(VAR(j, C) > 0)) {                                            \
     string VAR(before, C) = str_slice(VAR(fmt, C), 0, VAR(j, C));              \
     VAR(size, C) += sprint(string, VAR(before, C), ptr_end - VAR(size, C));    \
   }                                                                            \
@@ -257,7 +257,7 @@ Size sprint_intptr(intptr value, byte *buffer_end) {
   intptr VAR(j, C) = VAR(i, C);                                                \
   while (VAR(i, C) > 0) {                                                      \
     (VAR(i, C)--);                                                             \
-    if (expect_unlikely(VAR(fmt, C).ptr[VAR(i, C)] == '%')) {                  \
+    if (expect_far(VAR(fmt, C).ptr[VAR(i, C)] == '%')) {                       \
       string VAR(after, C) = str_slice(VAR(fmt, C), VAR(i, C) + 1, VAR(j, C)); \
       VAR(size, C) += sprint(string, VAR(after, C), ptr_end);                  \
       VAR(j, C) = VAR(i, C);                                                   \
@@ -267,7 +267,7 @@ Size sprint_intptr(intptr value, byte *buffer_end) {
   }                                                                            \
   while (VAR(i, C) > 0) {                                                      \
     (VAR(i, C)--);                                                             \
-    if (expect_unlikely(VAR(fmt, C).ptr[VAR(i, C)] == '%')) {                  \
+    if (expect_far(VAR(fmt, C).ptr[VAR(i, C)] == '%')) {                       \
       string VAR(after, C) = str_slice(VAR(fmt, C), VAR(i, C) + 1, VAR(j, C)); \
       VAR(size, C) += sprint(string, VAR(after, C), ptr_end - VAR(size, C));   \
       VAR(j, C) = VAR(i, C);                                                   \
@@ -277,7 +277,7 @@ Size sprint_intptr(intptr value, byte *buffer_end) {
   }                                                                            \
   while (VAR(i, C) > 0) {                                                      \
     (VAR(i, C)--);                                                             \
-    if (expect_unlikely(VAR(fmt, C).ptr[VAR(i, C)] == '%')) {                  \
+    if (expect_far(VAR(fmt, C).ptr[VAR(i, C)] == '%')) {                       \
       string VAR(after, C) = str_slice(VAR(fmt, C), VAR(i, C) + 1, VAR(j, C)); \
       VAR(size, C) += sprint(string, VAR(after, C), ptr_end - VAR(size, C));   \
       VAR(j, C) = VAR(i, C);                                                   \
@@ -287,7 +287,7 @@ Size sprint_intptr(intptr value, byte *buffer_end) {
   }                                                                            \
   while (VAR(i, C) > 0) {                                                      \
     (VAR(i, C)--);                                                             \
-    if (expect_unlikely(VAR(fmt, C).ptr[VAR(i, C)] == '%')) {                  \
+    if (expect_far(VAR(fmt, C).ptr[VAR(i, C)] == '%')) {                       \
       string VAR(after, C) = str_slice(VAR(fmt, C), VAR(i, C) + 1, VAR(j, C)); \
       VAR(size, C) += sprint(string, VAR(after, C), ptr_end - VAR(size, C));   \
       VAR(j, C) = VAR(i, C);                                                   \
@@ -295,7 +295,7 @@ Size sprint_intptr(intptr value, byte *buffer_end) {
       break;                                                                   \
     }                                                                          \
   }                                                                            \
-  if (expect_small(VAR(j, C) > 0)) {                                           \
+  if (expect_near(VAR(j, C) > 0)) {                                            \
     string VAR(before, C) = str_slice(VAR(fmt, C), 0, VAR(j, C));              \
     VAR(size, C) += sprint(string, VAR(before, C), ptr_end - VAR(size, C));    \
   }                                                                            \

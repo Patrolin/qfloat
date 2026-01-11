@@ -70,7 +70,7 @@ intptr munmap(intptr address, Size size) {
 ExceptionResult _page_fault_handler(_EXCEPTION_POINTERS *exception_info) {
   EXCEPTION_RECORD *exception = exception_info->ExceptionRecord;
   DWORD exception_code = exception->ExceptionCode;
-  if (expect_likely(exception_code == EXCEPTION_ACCESS_VIOLATION)) {
+  if (expect_near(exception_code == EXCEPTION_ACCESS_VIOLATION)) {
     uintptr ptr = exception->ExceptionInformation[1];
     intptr page_ptr = intptr(ptr) & ~intptr(OS_PAGE_SIZE - 1);
     intptr commited_ptr = VirtualAlloc(page_ptr, OS_PAGE_SIZE, MEM_COMMIT, PAGE_READWRITE);
@@ -135,7 +135,7 @@ intptr arena_alloc_impl(ArenaAllocator *arena, Size size, intptr align_mask) {
     intptr ptr = (current + align_mask) & ~align_mask;
     intptr next = ptr + intptr(size);
     assert(next <= end);
-    if (expect_exit(atomic_compare_exchange(&arena->next, &current, next))) {
+    if (atomic_compare_exchange(&arena->next, &current, next)) {
       memset((byte *)ptr, 0, size);
       return ptr;
     };

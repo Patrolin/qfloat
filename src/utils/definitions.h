@@ -162,15 +162,10 @@ ASSERT(OS_HUGE_PAGE_SIZE == 2 * MebiByte);
 #define read_steady_counter()          __builtin_readsteadycounter()
 /** NOTE: PrefetchMode :: enum {Read, Write, ReadWrite} */
 #define prefetch(ptr, mode, locality) __builtin_prefetch(ptr, mode, locality)
-/* do NOT use expect_xx() for loop conditions */
-/* generate code that takes shorter when the condition is true, but longer when the condition is false */
-#define expect_likely(condition) __builtin_expect(condition, true)
-/* generate code that takes shorter when the condition is false, but longer when the condition is true */
-#define expect_unlikely(condition) __builtin_expect(condition, false)
-/* NOTE: When there aren't any `break` or `return` statements, jump over the if block. */
-#define expect_small(condition) expect_likely(condition)
-/* NOTE: When there are `break` or `return` statements, let the compiler decide. */
-#define expect_exit(condition) (condition)
+/* NOTE: Put the block immediately after, and jump over it if the condition is false */
+#define expect_near(condition) __builtin_expect(condition, true)
+/* NOTE: Put the block far away, and jump to it if the condition is true */
+#define expect_far(condition) __builtin_expect(condition, false)
 /* TODO: when to use? */
 #define expect_unpredictable(condition) __builtin_unpredictable(condition)
 #define assume(condition)               __builtin_assume(condition)
@@ -192,11 +187,11 @@ typedef struct {
 #define string(rcstr)        ((string){rcstr, sizeof(rcstr) - 1})
 #define str_slice(str, i, j) ((string){&str.ptr[i], j < i ? 0 : Size(j) - Size(i)})
 bool str_equals(string a, string b) {
-  if (expect_unlikely(a.size != b.size)) {
+  if (expect_far(a.size != b.size)) {
     return false;
   }
   for (intptr i = 0; i < a.size; i++) {
-    if (expect_unlikely(a.ptr[i] != b.ptr[i])) {
+    if (expect_far(a.ptr[i] != b.ptr[i])) {
       return false;
     }
   }
@@ -223,7 +218,7 @@ typedef enum : uintptr {
   #define assert(condition) (void)(condition)
 #else
   #define assert(condition) ({                                                            \
-    if (expect_unlikely(!(condition))) {                                                  \
+    if (expect_far(!(condition))) {                                                       \
       fprint(STDERR, string(" " __FILE__ ":" STR(__LINE__) " assert(" #condition ")\n")); \
       abort();                                                                            \
     }                                                                                     \

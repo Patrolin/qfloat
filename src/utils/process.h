@@ -171,7 +171,7 @@ static void run_process_impl(readonly string app, readonly BuildArgs *args) {
   byte *command = (byte *)global_arena->next;
   memcpy(command, app.ptr, app.size);
   byte *next = command + app.size;
-  if (expect_likely(args != 0)) {
+  if (expect_near(args != 0)) {
     for (intptr i = 0; i < args->count; i++) {
       string str = args->start[i];
       *(next++) = ' ';

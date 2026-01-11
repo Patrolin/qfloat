@@ -20,7 +20,7 @@ typedef struct {
   u64 fail_count;
 } TestGroup;
 bool nonnull_(2) test_group(Thread t, TestGroup **group, string name, Thread thread_count) {
-  if (expect_small(t == 0)) {
+  if (expect_near(t == 0)) {
     *group = arena_alloc(global_arena, TestGroup);
     **group = (TestGroup){.name = name};
   }
@@ -29,7 +29,7 @@ bool nonnull_(2) test_group(Thread t, TestGroup **group, string name, Thread thr
 }
 void test_summary(Thread t, TestGroup *group) {
   barrier(t); /* NOTE: wait for writes */
-  if (expect_small(t == 0)) {
+  if (expect_near(t == 0)) {
     u64 test_count = group->test_count;
     u64 pass_count = test_count - group->fail_count;
     printf3(string(DELETE_LINE "   %: %/% tests passed\n"), string, group->name, u64, pass_count, u64, test_count);
@@ -47,11 +47,11 @@ void test_summary(Thread t, TestGroup *group) {
 #define check(thread, group, condition, t1, v1)         check_impl(__COUNTER__, thread, group, condition, t1, v1)
 #define check_impl(C, thread, group, condition, t1, v1) ({                                                          \
   u64 VAR(test_count, C) = atomic_add_fetch(&group->test_count, 1);                                                 \
-  if (expect_small(t == 0)) {                                                                                       \
+  if (expect_near(t == 0)) {                                                                                        \
     u64 VAR(pass_count, C) = VAR(test_count, C) - group->fail_count;                                                \
     printf3(string(DELETE_LINE "  %: %/%"), string, group->name, u64, VAR(pass_count, C), u64, VAR(test_count, C)); \
   }                                                                                                                 \
-  if (expect_unlikely(!(condition))) {                                                                              \
+  if (expect_near(!(condition))) {                                                                                  \
     u64 fail_count = atomic_add_fetch(&group->fail_count, 1);                                                       \
     printf3(string(DELETE_LINE "  %: test failed for % (%)\n"), string, group->name, hex, v1, t1, v1);              \
     abort();                                                                                                        \

@@ -142,7 +142,7 @@ void integer_sub(Integer *result, Integer a, Integer b) {
 #define _integer_karatsuba_mul_size(a, b) (a.chunks_size == 1 ? 2 : a.chunks_size * 2)
 void _integer_karatsuba_mul(Integer *result, Integer a, Integer b) {
   // assert(a.chunks_size == b.chunks_size && a.chunks_size != 0 && a.chunks_size is a power of two)
-  if (expect_likely(a.chunks_size == 1)) {
+  if (expect_near(a.chunks_size == 1)) {
     __uint128_t result_128 = (__uint128_t)a.chunks[0] * (__uint128_t)b.chunks[0];
     result->chunks[0] = result_128 & (u64)-1;
     result->chunks[1] = u64(result_128 >> 64);
