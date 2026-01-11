@@ -5,10 +5,16 @@
 #include "process.h"
 
 /* NOTE:
-     blocking = one thread can go to sleep and block all other threads (mutexes)
-    lock-free = one thread is guaranteed to make progress (atomic_add() or atomic_compare_exchange())
-    wait-free = all threads are guaranteed to make progress (wait-free SPSC queue, try_lock())
-  TODO: maybe make a ringbuffer, which is wait-free for SPSC, but lock-free for whichever side has multiple threads
+           blocking - a thread can go to sleep and block all other threads                    (`wait_for_mutex(&lock)`)
+                    - throughput and latency degrade with number of threads
+    starvation-free - blocking, but each thread is guaranteed a turn                          (`wait_for_ticket_mutex(&lock)`)
+                    - throughput degrades with number of threads
+          lock-free - one thread is always guaranteed to make progress, but others can starve (`for !atomic_compare_exchange(&value, expected, new_value(value)) {}`)
+                    - latency degrades with number of threads
+          wait-free - all threads are guaranteed to make progress                             (helping)
+                    - throughput and latency don't degrade with number of threads
+  TODO: make a ringbuffer that's wait-free for SPSC, but lock-free for whichever side has multiple threads
+   - MPSC, ... via each thread stack allocates a ring buffer and `barrier_xx()`
   TODO: wait-free structures?
 */
 
@@ -82,7 +88,7 @@ typedef enum : u64 {
 } SignalType;
 // https://nullprogram.com/blog/2023/03/23/
 typedef CUINT _linux_thread_entry(rawptr);
-typedef align(16) struct {
+typedef alignas(16) struct {
   _linux_thread_entry *entry;
   rawptr param;
 } new_thread_data;
@@ -119,7 +125,7 @@ intptr futex_wake(u32 *address, u32 count_to_wake) {
 // shared data
 DISTINCT(u32, Thread);
 #define Thread(x) ((Thread)(x))
-typedef align(32) struct {
+typedef alignas(32) struct {
   /* NOTE: barriers must be u32 on linux... */
   Thread threads_start;
   Thread threads_end;

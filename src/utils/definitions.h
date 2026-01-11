@@ -1,6 +1,16 @@
 #pragma once
 // IWYU pragma: begin_exports
-#include <stdbool.h>
+#if 0 /* compiles faster, but then STR(bool) is `"_Bool"`, and we can't do `bool(x)` */
+  #include <stdbool.h>
+#else
+  #define __STDBOOL_H
+  #define __bool_true_false_are_defined 1
+  #undef bool
+typedef _Bool bool;
+  #define bool(x) (bool)(x)
+  #define true    1
+  #define false   0
+#endif
 #include <stdint.h>
 // IWYU pragma: end_exports
 
@@ -138,7 +148,7 @@ ASSERT(OS_HUGE_PAGE_SIZE == 2 * MebiByte);
 #else
   #define nonnull_(...)
 #endif
-#define align(n)       __attribute__((aligned(n)))
+#define alignas(n)     __attribute__((aligned(n)))
 #define vector_size(n) __attribute__((vector_size(n)))
 // proc keywords
 #define forward_declare
@@ -323,10 +333,12 @@ ASSERT(sizeof(f16) == 2);
 #endif
 
 // builtins - https://clang.llvm.org/docs/LanguageExtensions.html#builtin-functions
-#define countof(x)       (intptr(sizeof(x)) / intptr(sizeof(x[0])))
-#define alignof(x)       __alignof__(x)
-#define alignof_bits(x)  (alignof(x) * 8)
-#define offsetof(t, key) __builtin_offsetof(t, key)
+#define countof(x)             (intptr(sizeof(x)) / intptr(sizeof(x[0])))
+#define alignof(x)             __alignof__(x)
+#define alignof_bits(x)        (alignof(x) * 8)
+#define offsetof(t, key)       __builtin_offsetof(t, key)
+#define align_up(ptr, align)   __builtin_align_up(ptr, align)
+#define align_down(ptr, align) __builtin_align_down(ptr, align)
 
 /* NOTE: __builtin_alloca() produces 6 instructions the first time, or 3 when reusing the same size */
 #define with_stack_allocator(stack)
@@ -364,27 +376,27 @@ ASSERT(sizeof(f16) == 2);
 #define volatile_store(ptr, value) __atomic_store_n(ptr, value, __ATOMIC_RELAXED)
 #define volatile_load(ptr)         __atomic_load_n(ptr, __ATOMIC_RELAXED)
 // #define compiler_fence() __atomic_signal_fence(__ATOMIC_SEQ_CST)
-#define memory_write_fence() __atomic_thread_fence(__ATOMIC_RELEASE)
-#define memory_read_fence()  __atomic_thread_fence(__ATOMIC_ACQUIRE)
-#define memory_fence()       __atomic_thread_fence(__ATOMIC_SEQ_CST)
+// #define memory_write_fence() __atomic_thread_fence(__ATOMIC_RELEASE)
+// #define memory_read_fence()  __atomic_thread_fence(__ATOMIC_ACQUIRE)
+#define memory_fence() __atomic_thread_fence(__ATOMIC_SEQ_CST)
 
-#define atomic_store(ptr, value)                           __atomic_store_n(ptr, value, __ATOMIC_SEQ_CST)
-#define atomic_load(ptr)                                   __atomic_load_n(ptr, __ATOMIC_SEQ_CST)
-#define atomic_exchange(ptr, value)                        __atomic_exchange_n(ptr, value, __ATOMIC_SEQ_CST)
-#define atomic_compare_exchange(ptr, expected, value)      __atomic_compare_exchange_n(ptr, expected, value, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST)
-#define atomic_compare_exchange_weak(ptr, expected, value) __atomic_compare_exchange_n(ptr, expected, value, true, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST)
-#define atomic_fetch_add(ptr, value)                       __atomic_fetch_add(ptr, value, __ATOMIC_SEQ_CST)
-#define atomic_add_fetch(ptr, value)                       __atomic_add_fetch(ptr, value, __ATOMIC_SEQ_CST)
-#define atomic_fetch_sub(ptr, value)                       __atomic_fetch_sub(ptr, value, __ATOMIC_SEQ_CST)
-#define atomic_sub_fetch(ptr, value)                       __atomic_sub_fetch(ptr, value, __ATOMIC_SEQ_CST)
-#define atomic_fetch_and(ptr, value)                       __atomic_fetch_and(ptr, value, __ATOMIC_SEQ_CST)
-#define atomic_and_fetch(ptr, value)                       __atomic_and_fetch(ptr, value, __ATOMIC_SEQ_CST)
-#define atomic_fetch_or(ptr, value)                        __atomic_fetch_or(ptr, value, __ATOMIC_SEQ_CST)
-#define atomic_or_fetch(ptr, value)                        __atomic_or_fetch(ptr, value, __ATOMIC_SEQ_CST)
-#define atomic_fetch_xor(ptr, value)                       __atomic_fetch_xor(ptr, value, __ATOMIC_SEQ_CST)
-#define atomic_xor_fetch(ptr, value)                       __atomic_xor_fetch(ptr, value, __ATOMIC_SEQ_CST)
-#define atomic_fetch_nand(ptr, value)                      __atomic_fetch_nand(ptr, value, __ATOMIC_SEQ_CST)
-#define atomic_nand_fetch(ptr, value)                      __atomic_nand_fetch(ptr, value, __ATOMIC_SEQ_CST)
+#define atomic_store(ptr, value)                           __atomic_store_n((ptr), (value), __ATOMIC_SEQ_CST)
+#define atomic_load(ptr)                                   __atomic_load_n((ptr), __ATOMIC_SEQ_CST)
+#define atomic_exchange(ptr, value)                        __atomic_exchange_n((ptr), (value), __ATOMIC_SEQ_CST)
+#define atomic_compare_exchange(ptr, expected, value)      __atomic_compare_exchange_n((ptr), (expected), (value), false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST)
+#define atomic_compare_exchange_weak(ptr, expected, value) __atomic_compare_exchange_n((ptr), (expected), (value), true, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST)
+#define atomic_fetch_add(ptr, value)                       __atomic_fetch_add((ptr), (value), __ATOMIC_SEQ_CST)
+#define atomic_add_fetch(ptr, value)                       __atomic_add_fetch((ptr), (value), __ATOMIC_SEQ_CST)
+#define atomic_fetch_sub(ptr, value)                       __atomic_fetch_sub((ptr), (value), __ATOMIC_SEQ_CST)
+#define atomic_sub_fetch(ptr, value)                       __atomic_sub_fetch((ptr), (value), __ATOMIC_SEQ_CST)
+#define atomic_fetch_and(ptr, value)                       __atomic_fetch_and((ptr), (value), __ATOMIC_SEQ_CST)
+#define atomic_and_fetch(ptr, value)                       __atomic_and_fetch((ptr), (value), __ATOMIC_SEQ_CST)
+#define atomic_fetch_or(ptr, value)                        __atomic_fetch_or((ptr), (value), __ATOMIC_SEQ_CST)
+#define atomic_or_fetch(ptr, value)                        __atomic_or_fetch((ptr), (value), __ATOMIC_SEQ_CST)
+#define atomic_fetch_xor(ptr, value)                       __atomic_fetch_xor((ptr), (value), __ATOMIC_SEQ_CST)
+#define atomic_xor_fetch(ptr, value)                       __atomic_xor_fetch((ptr), (value), __ATOMIC_SEQ_CST)
+#define atomic_fetch_nand(ptr, value)                      __atomic_fetch_nand((ptr), (value), __ATOMIC_SEQ_CST)
+#define atomic_nand_fetch(ptr, value)                      __atomic_nand_fetch((ptr), (value), __ATOMIC_SEQ_CST)
 ASSERT(__atomic_always_lock_free(1, 0));
 ASSERT(__atomic_always_lock_free(2, 0));
 ASSERT(__atomic_always_lock_free(4, 0));

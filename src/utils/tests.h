@@ -51,7 +51,7 @@ void test_summary(Thread t, TestGroup *group) {
     u64 VAR(pass_count, C) = VAR(test_count, C) - group->fail_count;                                                \
     printf3(string(DELETE_LINE "  %: %/%"), string, group->name, u64, VAR(pass_count, C), u64, VAR(test_count, C)); \
   }                                                                                                                 \
-  if (expect_near(!(condition))) {                                                                                  \
+  if (expect_far(!(condition))) {                                                                                   \
     u64 fail_count = atomic_add_fetch(&group->fail_count, 1);                                                       \
     printf3(string(DELETE_LINE "  %: test failed for % (%)\n"), string, group->name, hex, v1, t1, v1);              \
     abort();                                                                                                        \

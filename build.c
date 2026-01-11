@@ -1,4 +1,4 @@
-// clang build.c -o build.exe && ./build.exe
+// clang src/build.c -o build.exe && ./build.exe
 #pragma push_macro("SINGLE_CORE")
 #pragma push_macro("NASSERT")
 #define SINGLE_CORE 1
@@ -7,14 +7,14 @@
 #pragma pop_macro("SINGLE_CORE")
 
 // paths
-#define GEN_FLOAT_TABLES "src/gen_float_tables.c"
-#define GEN_FLOAT_TABLES_EXE "gen_float_tables.exe"
+#define GEN_FLOAT_TABLES      "src/gen_float_tables.c"
+#define GEN_FLOAT_TABLES_EXE  "gen_float_tables.exe"
 #define GEN_FLOAT_TABLES_DEST "generated/float_tables.h"
 
-#define LIB_CHARCONV "src/test/alternatives/lib_charconv.cpp"
+#define LIB_CHARCONV     "src/test/alternatives/lib_charconv.cpp"
 #define LIB_CHARCONV_DLL "generated/charconv.dll"
 
-#define TEST_QFLOAT "src/test/test_qfloat2.c"
+#define TEST_QFLOAT     "src/test/test_qfloat2.c"
 #define TEST_QFLOAT_EXE "test_qfloat.exe"
 
 void gen_float_tables();
@@ -26,7 +26,7 @@ void main_singlecore() {
   run_tests();
 }
 
-void set_c99(BuildArgs* args) {
+void set_c99(BuildArgs *args) {
   arg_alloc(args, "-march=native");
   arg_alloc(args, "-masm=intel");
   arg_alloc(args, "-std=gnu99");

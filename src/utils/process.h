@@ -144,9 +144,10 @@ typedef struct {
   arg_alloc_impl(args, string(arg1)); \
   arg_alloc_impl(args, string(arg2))
 static void arg_alloc_impl(BuildArgs *restrict args, string arg) {
-  string *ptr = arena_alloc(global_arena, string);
+  string *ptr = (string *)atomic_fetch_add(&global_arena->next, sizeof(string));
   *ptr = arg;
   args->start = args->start == 0 ? ptr : args->start;
+  assert(ptr == &args->start[args->count]); // assert single-threaded
   args->count += 1;
 }
 #if BUILD_SYSTEM
@@ -207,5 +208,5 @@ static void run_process_impl(readonly string app, readonly BuildArgs *args) {
   ASSERT(false);
 #endif
   // assert single-threaded
-  atomic_compare_exchange(&global_arena->next, (intptr *)&command, (intptr)command);
+  assert(atomic_compare_exchange(&global_arena->next, (intptr *)&command, (intptr)command));
 }

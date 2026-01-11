@@ -116,7 +116,7 @@ void page_free(intptr ptr) {
 #endif
 }
 
-// arena
+// wait-free arena (not guaranteed to use minimal space)
 typedef struct {
   intptr next;
   intptr end;
@@ -129,27 +129,22 @@ ArenaAllocator *arena_allocator(Bytes buffer) {
   return arena;
 }
 
-#define arena_alloc(arena, t)                      ((t *)arena_alloc_impl(arena, sizeof(t), alignof(t) - 1))
-#define arena_alloc_flexible(arena, t1, t2, count) ((t1 *)arena_alloc_impl(arena, sizeof(t1) + sizeof(t2) * count, alignof(t1) - 1))
-#define arena_alloc_array(arena, t, count)         ({              \
-  ASSERT_MUlTIPLE_OF(sizeof(t), alignof(t));                       \
-  (t *)arena_alloc_impl(arena, sizeof(t) * count, alignof(t) - 1); \
+#define arena_alloc(arena, t)                      ((t *)arena_alloc_impl(arena, sizeof(t), alignof(t)))
+#define arena_alloc_flexible(arena, t1, t2, count) ((t1 *)arena_alloc_impl(arena, sizeof(t1) + sizeof(t2) * count, alignof(t1)))
+#define arena_alloc_array(arena, t, count)         ({          \
+  ASSERT_MUlTIPLE_OF(sizeof(t), alignof(t));                   \
+  (t *)arena_alloc_impl(arena, sizeof(t) * count, alignof(t)); \
 })
-intptr arena_alloc_impl(ArenaAllocator *arena, Size size, intptr align_mask) {
-  intptr current = atomic_load(&arena->next);
-  intptr end = arena->end;
-  while (true) {
-    intptr ptr = (current + align_mask) & ~align_mask;
-    intptr next = ptr + intptr(size);
-    assert(next <= end);
-    if (atomic_compare_exchange(&arena->next, &current, next)) {
-      memset((byte *)ptr, 0, size);
-      return ptr;
-    };
-  }
+intptr arena_alloc_impl(ArenaAllocator *arena, Size size, intptr align) {
+  // assert(count_ones(align) == 1);
+  intptr ptr = atomic_fetch_add(&arena->next, intptr(size) + align);
+  ptr = align_up(ptr, align);
+  assert(arena->next >= ptr && ptr <= arena->end);
+  memset((byte *)ptr, 0, size);
+  return ptr;
 }
-void arena_reset(ArenaAllocator *arena, intptr next) {
-  /* NOTE: reset and assert single-threaded */
-  intptr current = atomic_load(&arena->next);
-  assert(atomic_compare_exchange(&arena->next, &current, next));
+static void arena_reset(ArenaAllocator *arena, intptr next) {
+  arena->next = next;
 }
+
+// TODO: lock-free O(1) general-purpose allocator
