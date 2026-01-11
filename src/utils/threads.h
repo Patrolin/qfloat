@@ -7,7 +7,9 @@
 /* NOTE:
      blocking = one thread can go to sleep and block all other threads (mutexes)
     lock-free = one thread is guaranteed to make progress (atomic_add() or atomic_compare_exchange())
-    wait-free = all threads are guaranteed to make progress (wait-free collections)
+    wait-free = all threads are guaranteed to make progress (wait-free SPSC queue, try_lock())
+  TODO: maybe make a ringbuffer, which is wait-free for SPSC, but lock-free for whichever side has multiple threads
+  TODO: wait-free structures?
 */
 
 // syscalls

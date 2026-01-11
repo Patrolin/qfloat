@@ -364,7 +364,9 @@ ASSERT(sizeof(f16) == 2);
 #define volatile_store(ptr, value) __atomic_store_n(ptr, value, __ATOMIC_RELAXED)
 #define volatile_load(ptr)         __atomic_load_n(ptr, __ATOMIC_RELAXED)
 // #define compiler_fence() __atomic_signal_fence(__ATOMIC_SEQ_CST)
-#define memory_fence() __atomic_thread_fence(__ATOMIC_SEQ_CST)
+#define memory_write_fence() __atomic_thread_fence(__ATOMIC_RELEASE)
+#define memory_read_fence()  __atomic_thread_fence(__ATOMIC_ACQUIRE)
+#define memory_fence()       __atomic_thread_fence(__ATOMIC_SEQ_CST)
 
 #define atomic_store(ptr, value)                           __atomic_store_n(ptr, value, __ATOMIC_SEQ_CST)
 #define atomic_load(ptr)                                   __atomic_load_n(ptr, __ATOMIC_SEQ_CST)
