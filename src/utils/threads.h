@@ -5,19 +5,20 @@
 #include "process.h"
 
 /* NOTE:
-                  obstruction-free - a thread can only make progress if no other threads are interfering     (optimistic reads)
-                                   - can livelock
-                          blocking - a thread can go to sleep and block all other threads                    (`wait_for_mutex(&lock)`)
-                                   - throughput and latency degrade with number of threads
-                   starvation-free - blocking, but each thread is guaranteed a turn                          (`wait_for_ticket_mutex(&lock)`)
-                                   - throughput degrades with number of threads
-                         lock-free - one thread is always guaranteed to make progress, but others can starve (CAS loops)
-                                   - latency degrades with number of threads
-                         wait-free - all threads are guaranteed to make progress                             (helping)
-                                   - latency degrades with number of threads
-    wait-free population oblivious - all threads are guaranteed to make progress                             (helping)
-                                   - throughput and latency don't degrade with number of threads
-  TODO: make a ringbuffer that's wait-free for SPSC, but lock-free for whichever side has multiple threads
+                         obstruction-free - a thread can only make progress if no other threads are interfering     (optimistic reads)
+                                          - can livelock
+                                 blocking - a suspended thread can starve all other threads infinitely              (`wait_for_mutex(&lock)`)
+                                          - throughput and latency degrade with number of threads
+                          starvation-free - a suspended thread can starve all other threads for a finite time       (`wait_for_ticket_mutex(&lock)`)
+                                          - throughput degrades with number of threads
+                                lock-free - one thread always makes progress, but others can starve                 (CAS loops)
+                                          - latency degrades with number of threads
+                                wait-free - all threads are guaranteed to make progress                             (helping)
+                                          - latency degrades with number of threads (one thread can starve)
+    wait-free population oblivious (WFPO) - all threads are guaranteed to make progress                             (helping)
+                                          - throughput and latency don't degrade with number of threads
+  TODO: ~make a ringbuffer that's wait-free for SPSC, but lock-free for whichever side has multiple threads~
+        make a wait-free ringbuffer (one thread can get stuck)
    - MPSC, ... via each thread stack allocates a ring buffer and `barrier_xx()`
   TODO: WFPO structures?
   TODO: wait-free alloc(allocator, size, align) {
