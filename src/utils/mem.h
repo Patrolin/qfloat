@@ -139,12 +139,13 @@ intptr arena_alloc_impl(ArenaAllocator *arena, Size size, intptr align) {
   // assert(count_ones(align) == 1);
   intptr ptr = atomic_fetch_add(&arena->next, intptr(size) + align);
   ptr = align_up(ptr, align);
-  assert(arena->next >= ptr && ptr <= arena->end);
+  assert(ptr + intptr(size) <= arena->end);
   memset((byte *)ptr, 0, size);
   return ptr;
 }
 static void arena_reset(ArenaAllocator *arena, intptr next) {
   arena->next = next;
+  assert(atomic_load(&arena->next) == next); // assert single-threaded
 }
 
 // TODO: lock-free O(1) general-purpose allocator
