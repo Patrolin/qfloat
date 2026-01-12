@@ -5,15 +5,16 @@
 #include "process.h"
 
 /* NOTE:
-                         obstruction-free - a thread can only make progress if no other threads are interfering     (optimistic reads)
-                                          - can livelock
                                  blocking - a suspended thread can starve all other threads infinitely              (`wait_for_mutex(&lock)`)
                                           - throughput and latency degrade with number of threads
                           starvation-free - a suspended thread can starve all other threads for a finite time       (`wait_for_ticket_mutex(&lock)`)
                                           - throughput degrades with number of threads
+                             non-blocking - a suspended thread does not impact other threads
+                         obstruction-free - a thread can only make progress if no other threads are interfering     (optimistic reads)
+                                          - can livelock
                                 lock-free - one thread always makes progress, but others can starve                 (CAS loops)
                                           - latency degrades with number of threads
-                                wait-free - all threads are guaranteed to make progress                             (helping)
+                                wait-free - all threads are guaranteed to make progress                             (helping + one-sided CAS loops)
                                           - latency degrades with number of threads (one thread can starve)
     wait-free population oblivious (WFPO) - all threads are guaranteed to make progress                             (helping)
                                           - throughput and latency don't degrade with number of threads

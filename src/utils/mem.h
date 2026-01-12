@@ -116,7 +116,7 @@ void page_free(intptr ptr) {
 #endif
 }
 
-// wait-free arena (not guaranteed to use minimal space)
+// WFPO arena (not guaranteed to use minimal space)
 typedef struct {
   intptr next;
   intptr end;

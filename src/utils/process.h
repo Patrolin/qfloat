@@ -144,9 +144,13 @@ typedef struct {
   arg_alloc_impl(args, string(arg1)); \
   arg_alloc_impl(args, string(arg2))
 static void arg_alloc_impl(BuildArgs *restrict args, string arg) {
+  if (expect_far(args->start == 0)) {
+    intptr start = align_up(global_arena->next, alignof(string));
+    args->start = (string *)start;
+    global_arena->next = start;
+  }
   string *ptr = (string *)atomic_fetch_add(&global_arena->next, sizeof(string));
   *ptr = arg;
-  args->start = args->start == 0 ? ptr : args->start;
   // assert(!out_of_memory && single_threaded)
   assert(intptr(ptr) + intptr(sizeof(string)) < global_arena->end && ptr == &args->start[args->count]);
   args->count += 1;
