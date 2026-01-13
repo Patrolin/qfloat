@@ -5,18 +5,18 @@
 #include "process.h"
 
 /* NOTE:
-                                 blocking - a suspended thread can starve all other threads infinitely              (`wait_for_mutex(&lock)`)
+                                 blocking - a suspended thread can starve all other threads indefinitely        (`wait_for_mutex(&lock)`)
                                           - throughput and latency degrade with number of threads
-                          starvation-free - a suspended thread can starve all other threads for a finite time       (`wait_for_ticket_mutex(&lock)`)
+                          starvation-free - a suspended thread can only starve other threads for a finite time  (`wait_for_ticket_mutex(&lock)`)
                                           - throughput degrades with number of threads
                              non-blocking - a suspended thread does not impact other threads
-                         obstruction-free - a thread can only make progress if no other threads are interfering     (optimistic reads)
+                         obstruction-free - a thread can only make progress if no other threads are interfering (optimistic reads)
                                           - can livelock
-                                lock-free - one thread always makes progress, but others can starve                 (CAS loops)
+                                lock-free - one thread can make progress, but others may starve                 (CAS loops)
                                           - latency degrades with number of threads
-                                wait-free - all threads are guaranteed to make progress                             (helping + one-sided CAS loops)
-                                          - latency degrades with number of threads (one thread can starve)
-    wait-free population oblivious (WFPO) - all threads are guaranteed to make progress                             (helping)
+                                wait-free - all threads can make progress, but one may still starve             (helping + CAS loops)
+                                          - latency degrades with number of threads
+    wait-free population oblivious (WFPO) - all threads can make progress                                       (helping)
                                           - throughput and latency don't degrade with number of threads
   TODO: ~make a ringbuffer that's wait-free for SPSC, but lock-free for whichever side has multiple threads~
         make a wait-free ringbuffer (one thread can get stuck)
@@ -24,10 +24,10 @@
   TODO: WFPO structures?
   TODO: wait-free alloc(allocator, size, align) {
     AllocOperation my_operation = alloc_operation(size, align);
-    AllocOperation in_flight;
     while(1) {
-      in_flight = atomic_compare_exchange(&allocator->in_flight, 0, my_operation);
-      if (in_flight == 0) break;
+      allocator->operations[t] = my_operation;
+      Thread in_flight = atomic_compare_exchange(&allocator->in_flight, -1, t);
+      if (in_flight == -1) break;
       // ..help the inflight operation
       atomic_compare_exchange(&allocator->in_flight, in_flight, my_operation);
     }
