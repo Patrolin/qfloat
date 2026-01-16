@@ -5,7 +5,9 @@
 #include <stdio.h>
 
 // common
-#ifndef NOLIBC
+#ifdef NOLIBC
+void *memcpy(void *dest_str, const void *src_str, size_t n);
+#else
   #include <assert.h>
   #include <string.h> /* NOTE: for memcpy() */
 #endif

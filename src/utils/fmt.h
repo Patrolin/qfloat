@@ -44,7 +44,9 @@ Size sprint_string(string str, byte *buffer_end) {
   return str.size;
 }
 
-#define sprint_size_bool(value) 5
+#define sprint_size__Bool(value)        sprint_size_bool(value)
+#define sprint__Bool(value, buffer_end) sprint_bool(value, buffer_end)
+#define sprint_size_bool(value)         5
 Size sprint_bool(bool value, byte *buffer_end) {
   string msg = value ? string("true") : string("false");
   return sprint_string(msg, buffer_end);

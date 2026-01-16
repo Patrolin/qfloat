@@ -1,22 +1,13 @@
 #pragma once
 // IWYU pragma: begin_exports
-#if 0 /* compiles faster, but then STR(bool) is `"_Bool"`, and we can't do `bool(x)` */
-  #include <stdbool.h>
-#else
-  #define __STDBOOL_H
-  #define __bool_true_false_are_defined 1
-  #undef bool
-typedef _Bool bool;
-  #define bool(x) (bool)(x)
-  #define true    1
-  #define false   0
-#endif
+#include <stdbool.h>
 #include <stdint.h>
 // IWYU pragma: end_exports
 
 // Size
 #define ASSERT(condition)        _Static_assert((condition), #condition)
 #define ASSERT_MUlTIPLE_OF(a, b) ASSERT(a % b == 0)
+#define ASSERT_POWER_OF_TWO(a)   ASSERT(count_ones(uintptr, a) == 1);
 #define DISTINCT(type, name) \
   typedef type name
 #define OPAQUE(name) typedef struct name name;
@@ -242,17 +233,20 @@ typedef enum : uintptr {
 
 // CRT
 #if NOLIBC
-extern void *memcpy(byte *dest, readonly byte *src, Size size) {
-  byte *dest_end = dest + size;
+  #define abs(x)   (x < 0) ? (-(x)) : (x)
+  #define labs(x)  (x < 0) ? (-(x)) : (x)
+  #define llabs(x) (x < 0) ? (-(x)) : (x)
+extern void *memcpy(void *dest, readonly void *src, Size size) {
+  void *dest_end = dest + size;
   while (dest < dest_end) {
-    *(dest++) = *(src++);
+    *(byte *)(dest++) = *(byte *)(src++);
   }
   return dest;
 }
-extern void *memset(byte *ptr, int x, Size size) {
+extern void *memset(void *ptr, int x, Size size) {
   assert(x <= 255);
   byte x_byte = (byte)x;
-  byte *ptr_end = ptr + size;
+  void *ptr_end = ptr + size;
   while (ptr < ptr_end) {
     *(byte *)(ptr++) = x_byte;
   }

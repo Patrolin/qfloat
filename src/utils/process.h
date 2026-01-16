@@ -77,7 +77,7 @@ noreturn_ _init_process() {
   /* NOTE: windows starts aligned to 8B, while linux starts (correctly) aligned to 16B
     thus we have to realign the stack pointer either way... */
   #if ARCH_X64
-    #define _start_impl() asm volatile("xor ebp, ebp; and rsp, -16; call _start_process" ::: "rbp", "rsp");
+    #define _start_impl() asm volatile("xor ebp, ebp; and rsp, -16; call _init_process" ::: "rbp", "rsp");
   #else
 ASSERT(false);
   #endif
