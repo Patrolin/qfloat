@@ -120,44 +120,53 @@ void page_free(intptr ptr) {
 #define RING_BUFFER_SIZE 4096
 ASSERT_POWER_OF_TWO(RING_BUFFER_SIZE);
 typedef struct {
-  bool written;
+  u32 written;
   u64 value;
 } RingBufferValue;
 typedef struct {
   intptr buffer;
-  intptr write_index;
-  intptr default_read_index;
+  i32 write_index;
+  i32 default_read_index;
 } RingBuffer;
 void ring_buffer_write(RingBuffer *rb, u64 value) {
-  // NOTE: wait-free population oblivious, but crash on overrun, must zero on reader side
-  intptr write_index = atomic_fetch_add(&rb->write_index, sizeof(RingBufferValue));
+  // NOTE: wait-free population oblivious, but crash on overrun, zeroed by reader
+  i32 write_index = atomic_fetch_add(&rb->write_index, sizeof(RingBufferValue));
   RingBufferValue *ptr = (RingBufferValue *)((rb->buffer + write_index) & (RING_BUFFER_SIZE - 1));
-  assert2(ptr->written == 0, string("RingBuffer overrun")); /* TODO: make a version that waits instead */
+  assert2(ptr->written == 0, string("RingBuffer overrun"));
+  ptr->value = value;
+  atomic_store(&ptr->written, 1);
+}
+forward_declare void wait_on_address(u32 *address, u32 while_value);
+void ring_buffer_write_or_wait(RingBuffer *rb, u64 value) {
+  // NOTE: wait-free population oblivious, but wait on overrun, zeroed by reader
+  i32 write_index = atomic_fetch_add(&rb->write_index, sizeof(RingBufferValue));
+  RingBufferValue *ptr = (RingBufferValue *)((rb->buffer + write_index) & (RING_BUFFER_SIZE - 1));
+  wait_on_address(&ptr->written, 1);
   ptr->value = value;
   atomic_store(&ptr->written, 1);
 }
 bool ring_buffer_read(RingBuffer *rb, u64 *value_ptr) {
   // NOTE: if there is only 1 reader, then wait-free population oblivious, else wait-free
-  intptr *read_index_ptr = &rb->default_read_index;
-  intptr read_index = atomic_load(read_index_ptr);
+  i32 *read_index_ptr = &rb->default_read_index;
+  i32 read_index = atomic_load(read_index_ptr);
   while (1) {
     RingBufferValue *ptr = (RingBufferValue *)((rb->buffer + read_index) & (RING_BUFFER_SIZE - 1));
     if (ptr->written == 0) return false;
-    if (atomic_compare_exchange(read_index_ptr, &read_index, read_index + intptr(sizeof(RingBufferValue)))) {
+    if (atomic_compare_exchange(read_index_ptr, &read_index, read_index + i32(sizeof(RingBufferValue)))) {
       *value_ptr = ptr->value;
       atomic_store(&ptr->written, 0);
       return true;
     };
   }
 }
-bool ring_buffer_read_duplicated(RingBuffer *rb, u64 *value_ptr, intptr *read_index_ptr) {
+bool ring_buffer_read_duplicated(RingBuffer *rb, u64 *value_ptr, i32 *read_index_ptr) {
   // NOTE: if each reader has its own `read_index`, then wait-free population oblivious, else wait-free
-  intptr read_index = atomic_load((u32 *)read_index_ptr);
-  intptr write_index = rb->write_index;
+  i32 read_index = atomic_load(read_index_ptr);
+  i32 write_index = rb->write_index;
   while (1) {
     RingBufferValue *ptr = (RingBufferValue *)((rb->buffer + read_index) & (RING_BUFFER_SIZE - 1));
     if (write_index - read_index <= 0 || ptr->written == 0) return false;
-    if (atomic_compare_exchange(read_index_ptr, &read_index, read_index + intptr(sizeof(RingBufferValue)))) {
+    if (atomic_compare_exchange(read_index_ptr, &read_index, read_index + i32(sizeof(RingBufferValue)))) {
       *value_ptr = ptr->value;
       atomic_store(&ptr->written, 0);
       return true;
@@ -197,3 +206,6 @@ static void arena_reset(ArenaAllocator *arena, intptr next) {
   arena->next = next;
   assert(atomic_load(&arena->next) == next); // assert single-threaded
 }
+
+// imports
+#include "threads.h"

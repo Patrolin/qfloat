@@ -3,6 +3,7 @@
 #include "fmt.h"
 #include "os.h"
 #include "mem.h"
+#include "threads.h"
 
 // init
 #if OS_WINDOWS
@@ -23,7 +24,6 @@ void _init_console() {
   // ASSERT(false);
 #endif
 }
-forward_declare void _init_page_fault_handler();
 void _init_shared_arena() {
   Bytes buffer = page_reserve(VIRTUAL_MEMORY_TO_RESERVE);
   global_arena = arena_allocator(buffer);
@@ -54,16 +54,11 @@ noreturn_ abort() {
 }
 
 // entry
-#if SINGLE_CORE
-forward_declare void main_singlecore();
-#else
-forward_declare void _init_threads();
-#endif
 noreturn_ _init_process() {
 #if OS_WINDOWS && NOLIBC
-  asm volatile("" ::"m"(_fltused));
+  asm volatile("" ::"X"(name))
 #endif
-  _init_console();
+    _init_console();
   _init_page_fault_handler();
   _init_shared_arena();
 #if SINGLE_CORE

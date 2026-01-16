@@ -2,7 +2,6 @@
 #include "definitions.h"
 #include "mem.h"
 #include "os.h"
-#include "process.h"
 
 /* NOTE:
                                  blocking - a suspended thread can starve all other threads indefinitely        (`wait_for_mutex(&lock)`)
@@ -167,6 +166,9 @@ ASSERT(alignof(Threads) == 32);
 global Threads *global_threads;
 
 // entry
+#if SINGLE_CORE
+forward_declare void main_singlecore();
+#else
 forward_declare void main_multicore(Thread t);
 forward_declare void barrier_join_threads(Thread t, Thread threads_start, Thread threads_end);
 CUINT thread_entry(rawptr param) {
@@ -175,28 +177,27 @@ CUINT thread_entry(rawptr param) {
   barrier_join_threads(t, 0, global_threads->logical_core_count);
   return 0;
 }
-
 void _init_threads() {
   // get `logical_core_count`
   u32 logical_core_count;
-#if RUN_SINGLE_THREADED
+  #if RUN_SINGLE_THREADED
   logical_core_count = 1;
-#else
-  #if OS_WINDOWS
+  #else
+    #if OS_WINDOWS
   SYSTEM_INFO info;
   GetSystemInfo(&info);
   logical_core_count = info.dwNumberOfProcessors; /* NOTE: this fails above 64 cores... */
-  #elif OS_LINUX
+    #elif OS_LINUX
   u8 cpu_masks[64];
   intptr written_masks_size = sched_getaffinity(0, sizeof(cpu_masks), (u8 *)&cpu_masks);
   assert(written_masks_size >= 0);
   for (intptr i = 0; i < written_masks_size; i++) {
     logical_core_count += count_ones(u8, cpu_masks[i]);
   }
-  #else
+    #else
   assert(false);
+    #endif
   #endif
-#endif
   assert(logical_core_count > 0);
   // start threads
   global_threads = arena_alloc_flexible(global_arena, Threads, ThreadInfo, logical_core_count);
@@ -207,45 +208,48 @@ void _init_threads() {
   for (Thread t = 0; t < logical_core_count; t++) {
     global_threads->thread_infos[t].threads_end = logical_core_count;
     if (expect_near(t > 0)) {
-#if OS_WINDOWS
+  #if OS_WINDOWS
       assert(CreateThread(0, 0, thread_entry, (rawptr)uintptr(t), STACK_SIZE_PARAM_IS_A_RESERVATION, 0) != 0);
-#elif OS_LINUX
+  #elif OS_LINUX
       rlimit stack_size_limit;
       assert(getrlimit(RLIMIT_STACK, &stack_size_limit) >= 0);
       u64 stack_size = stack_size_limit.rlim_cur;
       intptr stack = mmap(0, stack_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_GROWSDOWN | MAP_STACK, -1, 0);
       assert(stack != -1);
-  #if ARCH_STACK_DIRECTION == -1
+    #if ARCH_STACK_DIRECTION == -1
       stack = stack + intptr(stack_size) - intptr(sizeof(new_thread_data));
       new_thread_data *stack_data = (new_thread_data *)(stack);
-  #else
+    #else
       new_thread_data *stack_data = (new_thread_data *)(stack);
       stack = stack + sizeof(new_thread_data);
-  #endif
+    #endif
       stack_data->entry = thread_entry;
       stack_data->param = (rawptr)uintptr(t);
       ThreadFlags flags = CLONE_VM | CLONE_FS | CLONE_FILES | CLONE_SIGHAND | CLONE_THREAD | CLONE_SYSVSEM;
       /* NOTE: SIGCHLD is the only one that doesn't print garbage depending on which thread exits... */
       intptr error = newthread(flags | (ThreadFlags)SIGCHLD, stack_data);
       assert(error >= 0);
-#else
+  #else
       assert(false);
-#endif
+  #endif
     }
   }
   thread_entry(0);
 }
+#endif
 
 // multi-core
-/* NOTE: wait on address, with a chance to wake up spuriously (including on windows...) */
 void wait_on_address(u32 *address, u32 while_value) {
+  /* NOTE: On Windows, WaitOnAddress() "is allowed to return for other reasons", same thing with futex() on Linux */
+  while (atomic_load(address) == while_value) {
 #if OS_WINDOWS
-  WaitOnAddress(address, &while_value, sizeof(while_value), TIME_INFINITE);
+    WaitOnAddress(address, &while_value, sizeof(while_value), TIME_INFINITE);
 #elif OS_LINUX
-  futex_wait(address, while_value, 0);
+    futex_wait(address, while_value, 0);
 #else
-  assert(false);
+    assert(false);
 #endif
+  }
 }
 void wake_all_on_address(u32 *address) {
 #if OS_WINDOWS
@@ -267,10 +271,7 @@ void barrier(Thread t) {
   u32 barrier_stop = barrier + thread_count;
   u32 barrier_counter = atomic_add_fetch(&shared_data->barrier_counter, 1);
   if (expect_near(barrier_counter != barrier_stop)) {
-    /* NOTE: On windows, WaitOnAddress() "is allowed to return for other reasons", same thing with futex() on linux */
-    while (atomic_load(&shared_data->barrier) == barrier) {
-      wait_on_address(&shared_data->barrier, barrier);
-    }
+    wait_on_address(&shared_data->barrier, barrier);
   } else {
     /* NOTE: reset counters in case we have a non-power-of-two number of threads */
     shared_data->is_first_counter = 0;
@@ -329,9 +330,7 @@ bool barrier_split_threads(Thread t, u32 n) {
   u32 barrier_stop = barrier + thread_count;
   u32 barrier_counter = atomic_add_fetch(&shared_data->barrier_counter, 1);
   if (expect_near(barrier_counter != barrier_stop)) {
-    while (atomic_load(&shared_data->barrier) == barrier) {
-      wait_on_address(&shared_data->barrier, barrier);
-    }
+    wait_on_address(&shared_data->barrier, barrier);
   } else {
     // modify threads
     for (Thread i = threads_start; i < threads_end; i++) {
@@ -361,9 +360,7 @@ void barrier_join_threads(Thread t, Thread threads_start, Thread threads_end) {
   u32 barrier_stop = barrier + thread_count;
   u32 barrier_counter = atomic_add_fetch(&shared_data->join_barrier_counter, 1);
   if (expect_near(barrier_counter != barrier_stop)) {
-    while (atomic_load(&shared_data->join_barrier) == barrier) {
-      wait_on_address(&shared_data->join_barrier, barrier);
-    }
+    wait_on_address(&shared_data->join_barrier, barrier);
   } else {
     // modify threads
     for (Thread i = threads_start; i < threads_end; i++) {
@@ -378,3 +375,7 @@ void barrier_join_threads(Thread t, Thread threads_start, Thread threads_end) {
     wake_all_on_address(&shared_data->join_barrier);
   }
 }
+
+/* IWYU pragma: begin_exports */
+#include "process.h"
+/* IWYU pragma: end_exports */
