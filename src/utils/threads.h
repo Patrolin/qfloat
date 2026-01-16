@@ -36,6 +36,39 @@
   }
 */
 
+// ring buffer
+#define RING_BUFFER_SIZE 4096
+ASSERT_POWER_OF_TWO(RING_BUFFER_SIZE);
+typedef struct {
+  bool written;
+  u64 value;
+} RingBufferValue;
+typedef struct {
+  intptr buffer;
+  intptr write_index;
+  intptr default_read_index;
+} RingBuffer;
+void ring_buffer_write(RingBuffer *rb, u64 value) {
+  // NOTE: wait-free population oblivious, but crash on overrun, must zero on reader side
+  intptr write_index = atomic_fetch_add(&rb->write_index, sizeof(RingBufferValue));
+  RingBufferValue *ptr = (RingBufferValue *)((rb->buffer + write_index) & (RING_BUFFER_SIZE - 1));
+  assert2(ptr->written == 0, string("RingBuffer overrun")); /* TODO: make a version that waits instead */
+  ptr->value = value;
+  atomic_store(&ptr->written, 1);
+}
+bool ring_buffer_read(RingBuffer *rb, intptr *read_index_ptr, u64 *value_ptr) {
+  // NOTE: wait-free
+  intptr read_index = atomic_load((u32 *)read_index_ptr);
+  while (1) {
+    RingBufferValue *ptr = (RingBufferValue *)((rb->buffer + read_index) & (RING_BUFFER_SIZE - 1));
+    if (ptr->written == 0) return false;
+    if (!atomic_compare_exchange(read_index_ptr, &read_index, read_index + intptr(sizeof(RingBufferValue)))) continue;
+    *value_ptr = ptr->value;
+    atomic_store(&ptr->written, 0);
+    return true;
+  }
+}
+
 // syscalls
 #if OS_WINDOWS
 typedef struct {
