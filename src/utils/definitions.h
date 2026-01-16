@@ -220,16 +220,12 @@ typedef enum : uintptr {
   STDERR = 2,
 } ConsoleHandleEnum;
 #endif
-#if NASSERT
-  #define assert2(condition, message) (void)(condition)
-#else
-  #define assert2(condition, message) ({ \
-    if (expect_far(!(condition))) {      \
-      fprint(STDERR, message);           \
-      abort();                           \
-    }                                    \
-  })
-#endif
+#define assert2(condition, message) ({ \
+  if (expect_far(!(condition))) {      \
+    fprint(STDERR, message);           \
+    abort();                           \
+  }                                    \
+})
 #define assert(condition) assert2(condition, string(" " __FILE__ ":" STR(__LINE__) " assert(" #condition ")\n"))
 
 // CRT

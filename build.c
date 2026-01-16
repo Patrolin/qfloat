@@ -1,9 +1,8 @@
 // clang src/build.c -o build.exe && ./build.exe
+// clang build.c -o build.exe -DNOLIBC -masm=intel && ./build.exe
 #pragma push_macro("SINGLE_CORE")
-#pragma push_macro("NASSERT")
 #define SINGLE_CORE 1
 #include "src/utils/process.h"
-#pragma pop_macro("NASSERT")
 #pragma pop_macro("SINGLE_CORE")
 
 // paths
@@ -84,9 +83,6 @@ void run_tests() {
 #endif
 #if SINGLE_CORE
   arg_alloc(&args, "-DSINGLE_CORE");
-#endif
-#if NASSERT
-  arg_alloc(&args, "-DNASSERT");
 #endif
 #if NDEBUG
   arg_alloc(&args, "-DNDEBUG");
