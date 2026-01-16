@@ -116,7 +116,57 @@ void page_free(intptr ptr) {
 #endif
 }
 
+// ring buffer
+#define RING_BUFFER_SIZE 4096
+ASSERT_POWER_OF_TWO(RING_BUFFER_SIZE);
+typedef struct {
+  bool written;
+  u64 value;
+} RingBufferValue;
+typedef struct {
+  intptr buffer;
+  intptr write_index;
+  intptr default_read_index;
+} RingBuffer;
+void ring_buffer_write(RingBuffer *rb, u64 value) {
+  // NOTE: wait-free population oblivious, but crash on overrun, must zero on reader side
+  intptr write_index = atomic_fetch_add(&rb->write_index, sizeof(RingBufferValue));
+  RingBufferValue *ptr = (RingBufferValue *)((rb->buffer + write_index) & (RING_BUFFER_SIZE - 1));
+  assert2(ptr->written == 0, string("RingBuffer overrun")); /* TODO: make a version that waits instead */
+  ptr->value = value;
+  atomic_store(&ptr->written, 1);
+}
+bool ring_buffer_read(RingBuffer *rb, u64 *value_ptr) {
+  // NOTE: if there is only 1 reader, then wait-free population oblivious, else wait-free
+  intptr *read_index_ptr = &rb->default_read_index;
+  intptr read_index = atomic_load(read_index_ptr);
+  while (1) {
+    RingBufferValue *ptr = (RingBufferValue *)((rb->buffer + read_index) & (RING_BUFFER_SIZE - 1));
+    if (ptr->written == 0) return false;
+    if (atomic_compare_exchange(read_index_ptr, &read_index, read_index + intptr(sizeof(RingBufferValue)))) {
+      *value_ptr = ptr->value;
+      atomic_store(&ptr->written, 0);
+      return true;
+    };
+  }
+}
+bool ring_buffer_read_duplicated(RingBuffer *rb, u64 *value_ptr, intptr *read_index_ptr) {
+  // NOTE: if each reader has its own `read_index`, then wait-free population oblivious, else wait-free
+  intptr read_index = atomic_load((u32 *)read_index_ptr);
+  intptr write_index = rb->write_index;
+  while (1) {
+    RingBufferValue *ptr = (RingBufferValue *)((rb->buffer + read_index) & (RING_BUFFER_SIZE - 1));
+    if (write_index - read_index <= 0 || ptr->written == 0) return false;
+    if (atomic_compare_exchange(read_index_ptr, &read_index, read_index + intptr(sizeof(RingBufferValue)))) {
+      *value_ptr = ptr->value;
+      atomic_store(&ptr->written, 0);
+      return true;
+    };
+  }
+}
+
 // WFPO arena (not guaranteed to use minimal space)
+// TODO: wait-free population oblivious general-purpose allocator instead
 typedef struct {
   intptr next;
   intptr end;
@@ -147,5 +197,3 @@ static void arena_reset(ArenaAllocator *arena, intptr next) {
   arena->next = next;
   assert(atomic_load(&arena->next) == next); // assert single-threaded
 }
-
-// TODO: lock-free O(1) general-purpose allocator
