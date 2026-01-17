@@ -179,7 +179,8 @@ bool ring_buffer_read_duplicated(RingBuffer *rb, u64 *value_ptr, i32 *read_index
 /* NOTE: free_list_size(n): n < 8 ? n : 2**(floor(n/8) + 2) * (8 + n%8)/8 */
 #define FREE_LIST_COUNT                  128
 #define MEM_FLOAT_IMPLICIT_MANTISSA_BITS 3
-#define MEM_FLOAT_MANTISSA_MAX           (1 << MEM_FLOAT_IMPLICIT_MANTISSA_BITS)
+
+#define MEM_FLOAT_MANTISSA_MAX (1 << MEM_FLOAT_IMPLICIT_MANTISSA_BITS)
 typedef struct {
   intptr next;
 } FreeList;
@@ -197,6 +198,7 @@ typedef struct {
   intptr next;
   intptr end;
 } Allocator;
+
 uintptr _free_list_index_floor(Size size) {
   if (size < MEM_FLOAT_MANTISSA_MAX) return size;
   Size mantissa_start = index_first_one_floor(Size, size) - MEM_FLOAT_IMPLICIT_MANTISSA_BITS;

@@ -104,7 +104,7 @@ typedef enum : u64 {
 } SignalType;
 // https://nullprogram.com/blog/2023/03/23/
 typedef CUINT _linux_thread_entry(rawptr);
-typedef alignas(16) struct {
+typedef alignto(16) struct {
   _linux_thread_entry *entry;
   rawptr param;
 } new_thread_data;
@@ -141,7 +141,7 @@ intptr futex_wake(u32 *address, u32 count_to_wake) {
 // shared data
 DISTINCT(u32, Thread);
 #define Thread(x) ((Thread)(x))
-typedef alignas(32) struct {
+typedef alignto(32) struct {
   /* NOTE: barriers must be u32 on linux... */
   Thread threads_start;
   Thread threads_end;

@@ -139,7 +139,7 @@ ASSERT(OS_HUGE_PAGE_SIZE == 2 * MebiByte);
 #else
   #define nonnull_(...)
 #endif
-#define alignas(n)     __attribute__((aligned(n)))
+#define alignto(n)     __attribute__((aligned(n)))
 #define vector_size(n) __attribute__((vector_size(n)))
 // proc keywords
 #define forward_declare
