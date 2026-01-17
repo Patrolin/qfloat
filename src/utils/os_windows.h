@@ -1,5 +1,5 @@
 #pragma once
-#include "definitions.h"
+#include "builtin.h"
 
 // types
 typedef CINT BOOL;

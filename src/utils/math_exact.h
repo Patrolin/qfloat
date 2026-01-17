@@ -1,5 +1,5 @@
 #pragma once
-#include "definitions.h"
+#include "builtin.h"
 
 // Integer slice
 typedef struct {

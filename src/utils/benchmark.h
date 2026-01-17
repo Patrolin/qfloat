@@ -1,5 +1,5 @@
 #pragma once
-#include "definitions.h"
+#include "builtin.h"
 
 #define optimizer_fence(value) asm volatile("" : "+X"(value))
 // TODO: timings

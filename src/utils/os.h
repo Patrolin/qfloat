@@ -1,5 +1,5 @@
 #pragma once
-#include "definitions.h"
+#include "builtin.h"
 
 /* IWYU pragma: begin_exports */
 #if OS_WINDOWS

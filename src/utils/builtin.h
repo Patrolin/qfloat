@@ -268,13 +268,13 @@ typedef uint8_t u8;
 #define u8(x) ((u8)(x))
 
 #define MIN_u64 u64(0)
-#define MAX_u64 u64(0xffffffffffffffff)
+#define MAX_u64 u64(-1)
 #define MIN_u32 u32(0)
-#define MAX_u32 u32(0xffffffff)
+#define MAX_u32 u32(-1)
 #define MIN_u16 u16(0)
-#define MAX_u16 u16(0xffff)
+#define MAX_u16 u16(-1)
 #define MIN_u8  u8(0)
-#define MAX_u8  u8(0xff)
+#define MAX_u8  u8(-1)
 
 typedef __int128 i128;
 typedef int64_t i64;
@@ -287,13 +287,13 @@ typedef int8_t i8;
 #define i8(x) ((i8)(x))
 
 #define MIN_i64 i64(MAX_u64)
-#define MAX_i64 i64(0x7fffffffffffffff)
+#define MAX_i64 i64(MAX_u64 >> 1)
 #define MIN_i32 i32(MAX_u32)
-#define MAX_i32 i32(0x7fffffff)
+#define MAX_i32 i32(MAX_u32 >> 1)
 #define MIN_i16 i16(MAX_u16)
-#define MAX_i16 i16(0x7fff)
+#define MAX_i16 i16(MAX_u16 >> 1)
 #define MIN_i8  i8(MAX_u8)
-#define MAX_i8  i8(0x7f)
+#define MAX_i8  i8(MAX_u8 >> 1)
 
 // typedef signed char CICHAR;
 // typedef unsigned char CUCHAR;
@@ -326,9 +326,8 @@ ASSERT(sizeof(f16) == 2);
 #endif
 
 // builtins - https://clang.llvm.org/docs/LanguageExtensions.html#builtin-functions
-#ifndef typeof
-  #define typeof(x) __typeof__(x)
-#endif
+#define asm                    __asm__
+#define typeof(x)              __typeof__(x)
 #define sizeof_bits(x)         (sizeof(x) * 8)
 #define countof(x)             (intptr(sizeof(x)) / intptr(sizeof(x[0])))
 #define alignof(x)             __alignof__(x)
