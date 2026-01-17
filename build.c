@@ -2,6 +2,7 @@
 // clang build.c -o build.exe -DNOLIBC -fno-builtin -masm=intel && ./build.exe
 #pragma push_macro("SINGLE_CORE")
 #define SINGLE_CORE 1
+#include "src/utils/entry.h"
 #include "src/utils/process.h"
 #pragma pop_macro("SINGLE_CORE")
 

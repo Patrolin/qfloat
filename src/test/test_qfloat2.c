@@ -8,6 +8,7 @@
 #include "alternatives/lib_charconv.h" /* IWYU pragma: keep */
 
 #undef assert
+#include "../utils/entry.h"
 #include "../utils/process.h"
 #include "../utils/tests.h"
 

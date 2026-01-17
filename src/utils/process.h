@@ -153,7 +153,3 @@ static void run_process_impl(readonly string app, readonly BuildArgs *args) {
   // assert single-threaded
   assert(atomic_compare_exchange(&global_arena->next, (intptr *)&command, (intptr)command));
 }
-
-/* IWYU pragma: begin_exports */
-#include "entry.h"
-/* IWYU pragma: end_exports */

@@ -230,8 +230,10 @@ intptr alloc(Allocator *allocator, Size size, Size align) {
   return 0;
 }
 void free(Allocator *allocator, void *ptr) {
-  // global_threads->aaa
-  //..free
+  //..push to global_threads->reclaim_queue
+}
+void reclaim_memory() {
+  //..reclaim memory
 }
 
 // WFPO arena (not guaranteed to use minimal space)
