@@ -206,7 +206,7 @@ uintptr _free_list_index_floor(Size size) {
   Size mantissa = (size >> mantissa_start) & (MEM_FLOAT_MANTISSA_MAX - 1);
   return exponent | mantissa;
 }
-intptr free_list_get(Allocator *allocator, Size size) {
+intptr _free_list_get(Allocator *allocator, Size size) {
   // TODO: this is too aggressive - do the proper algorithm
   uintptr free_list_index = _free_list_index_floor((size - 1) << 1);
   //..get item from first valid free_list
@@ -222,7 +222,7 @@ intptr alloc(Allocator *allocator, Size size, Size align) {
   if (size == 0) return 0;
   //..if too big, just virtual alloc
   Size padded_size = max(sizeof(UsedBlockHeader) + (align - 1) + size, sizeof(FreeBlockHeader));
-  intptr ptr = free_list_get(allocator, padded_size);
+  intptr ptr = _free_list_get(allocator, padded_size);
   if (ptr == 0) {
     ptr = atomic_fetch_add(&allocator->next, intptr(padded_size));
   }
