@@ -3,31 +3,6 @@
 #include "fmt.h"
 #include "os.h"
 #include "mem.h"
-#include "threads.h"
-
-// init
-#if OS_WINDOWS
-typedef enum : DWORD {
-  CP_UTF8 = 65001,
-} CodePage;
-
-foreign BOOL WINAPI SetConsoleOutputCP(CodePage code_page);
-#elif OS_LINUX
-#else
-ASSERT(false);
-#endif
-
-void _init_console() {
-#if OS_WINDOWS
-  SetConsoleOutputCP(CP_UTF8);
-#else
-  // ASSERT(false);
-#endif
-}
-void _init_shared_arena() {
-  Bytes buffer = page_reserve(VIRTUAL_MEMORY_TO_RESERVE);
-  global_arena = arena_allocator(buffer);
-}
 
 // exit
 #if OS_WINDOWS
@@ -52,38 +27,6 @@ noreturn_ abort() {
   // TODO: maybe just use `trap()`?
   exit_process(1);
 }
-
-// entry
-noreturn_ _init_process() {
-#if OS_WINDOWS && NOLIBC
-  asm volatile("" ::"X"(name))
-#endif
-    _init_console();
-  _init_page_fault_handler();
-  _init_shared_arena();
-#if SINGLE_CORE
-  main_singlecore();
-#else
-  _init_threads();
-#endif
-  exit_process(0);
-}
-#if NOLIBC
-  /* NOTE: windows starts aligned to 8B, while linux starts (correctly) aligned to 16B
-    thus we have to realign the stack pointer either way... */
-  #if ARCH_X64
-    #define _start_impl() asm volatile("xor ebp, ebp; and rsp, -16; call _init_process" ::: "rbp", "rsp");
-  #else
-ASSERT(false);
-  #endif
-naked noreturn_ _start() {
-  _start_impl();
-}
-#else
-CINT main() {
-  _init_process();
-}
-#endif
 
 // build system
 #if OS_WINDOWS
@@ -210,3 +153,7 @@ static void run_process_impl(readonly string app, readonly BuildArgs *args) {
   // assert single-threaded
   assert(atomic_compare_exchange(&global_arena->next, (intptr *)&command, (intptr)command));
 }
+
+/* IWYU pragma: begin_exports */
+#include "entry.h"
+/* IWYU pragma: end_exports */

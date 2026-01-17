@@ -1,6 +1,7 @@
 -march=native
 -masm=intel
--std=gnu99
+-std=c99
+-fno-builtin
 -fno-signed-char
 -Werror
 -Wconversion

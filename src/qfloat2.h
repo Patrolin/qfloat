@@ -45,7 +45,7 @@ void *memcpy(void *dest_str, const void *src_str, size_t n);
     memcpy(v2, v1, sizeof(*(v1)));
   #define qf_abs(a)                 ((a) < 0 ? -(a) : (a))
   #define qf_min(a, b)              ((a) < (b) ? (a) : (b))
-  #define qf_count_leading_zeros(a) ((typeof(a))__builtin_clzg(a))
+  #define qf_count_leading_zeros(a) ((__typeof__(a))__builtin_clzg(a))
 QF_ASSERT(sizeof(char) == 1);
 #endif
 

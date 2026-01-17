@@ -1,6 +1,7 @@
 #pragma once
 #include "definitions.h"
 #include "os.h"
+#include "threads.h"
 
 // TODO: do we care?, or do we just align to cache line?
 #if ARCH_IS_64_BIT
@@ -174,8 +175,66 @@ bool ring_buffer_read_duplicated(RingBuffer *rb, u64 *value_ptr, i32 *read_index
   }
 }
 
+// TODO: wait-free population oblivious general-purpose allocator instead of arena
+/* NOTE: free_list_size(n): n < 8 ? n : 2**(floor(n/8) + 2) * (8 + n%8)/8 */
+#define FREE_LIST_COUNT                  128
+#define MEM_FLOAT_IMPLICIT_MANTISSA_BITS 3
+#define MEM_FLOAT_MANTISSA_MAX           (1 << MEM_FLOAT_IMPLICIT_MANTISSA_BITS)
+typedef struct {
+  intptr next;
+} FreeList;
+typedef struct {
+  intptr next;
+} FreeBlockHeader;
+typedef struct {
+  u16 size;
+  u16 align_offset;
+} UsedBlockHeader;
+typedef struct {
+  byte *buffer;
+  Size buffer_size;
+  FreeList free_lists[FREE_LIST_COUNT];
+  intptr next;
+  intptr end;
+} Allocator;
+uintptr _free_list_index_floor(Size size) {
+  if (size < MEM_FLOAT_MANTISSA_MAX) return size;
+  Size mantissa_start = index_first_one_floor(Size, size) - MEM_FLOAT_IMPLICIT_MANTISSA_BITS;
+  Size exponent = (mantissa_start + 1) << MEM_FLOAT_IMPLICIT_MANTISSA_BITS;
+  Size mantissa = (size >> mantissa_start) & (MEM_FLOAT_MANTISSA_MAX - 1);
+  return exponent | mantissa;
+}
+intptr free_list_get(Allocator *allocator, Size size) {
+  // TODO: this is too aggressive - do the proper algorithm
+  uintptr free_list_index = _free_list_index_floor((size - 1) << 1);
+  //..get item from first valid free_list
+  return 0;
+}
+Size _free_list_size(uintptr n) {
+  Size exponent = n >> MEM_FLOAT_IMPLICIT_MANTISSA_BITS;
+  Size mantissa = n & (MEM_FLOAT_MANTISSA_MAX - 1);
+  if (exponent == 0) return mantissa;
+  return (mantissa | MEM_FLOAT_MANTISSA_MAX) << (exponent - 1);
+}
+intptr alloc(Allocator *allocator, Size size, Size align) {
+  if (size == 0) return 0;
+  //..if too big, just virtual alloc
+  Size padded_size = max(sizeof(UsedBlockHeader) + (align - 1) + size, sizeof(FreeBlockHeader));
+  intptr ptr = free_list_get(allocator, padded_size);
+  if (ptr == 0) {
+    ptr = atomic_fetch_add(&allocator->next, intptr(padded_size));
+  }
+  ptr = align_up(ptr, intptr(align));
+  assert(ptr + intptr(size) <= allocator->end);
+  memset((byte *)ptr, 0, size);
+  return 0;
+}
+void free(Allocator *allocator, void *ptr) {
+  // global_threads->aaa
+  //..free
+}
+
 // WFPO arena (not guaranteed to use minimal space)
-// TODO: wait-free population oblivious general-purpose allocator instead
 typedef struct {
   intptr next;
   intptr end;
@@ -206,6 +265,3 @@ static void arena_reset(ArenaAllocator *arena, intptr next) {
   arena->next = next;
   assert(atomic_load(&arena->next) == next); // assert single-threaded
 }
-
-// imports
-#include "threads.h"

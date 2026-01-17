@@ -1,5 +1,5 @@
-// clang src/build.c -o build.exe && ./build.exe
-// clang build.c -o build.exe -DNOLIBC -masm=intel && ./build.exe
+// clang src/build.c -o build.exe -fno-builtin && ./build.exe
+// clang build.c -o build.exe -DNOLIBC -fno-builtin -masm=intel && ./build.exe
 #pragma push_macro("SINGLE_CORE")
 #define SINGLE_CORE 1
 #include "src/utils/process.h"
@@ -28,12 +28,24 @@ void main_singlecore() {
 void set_c99(BuildArgs *args) {
   arg_alloc(args, "-march=native");
   arg_alloc(args, "-masm=intel");
-  arg_alloc(args, "-std=gnu99");
+  arg_alloc(args, "-std=c99");
+  arg_alloc(args, "-fno-builtin"); /* NOTE: don't assume the types of functions like `free()` */
   arg_alloc(args, "-fno-signed-char");
   arg_alloc(args, "-Werror");
   arg_alloc(args, "-Wconversion");
   arg_alloc(args, "-Wsign-conversion");
   arg_alloc(args, "-Wnullable-to-nonnull-conversion");
+#if NOLIBC
+  arg_alloc(args, "-nostdlib");
+  arg_alloc(args, "-mno-stack-arg-probe");
+  arg_alloc(args, "-DNOLIBC");
+#endif
+#if SINGLE_CORE
+  arg_alloc(args, "-DSINGLE_CORE");
+#endif
+#if NDEBUG
+  arg_alloc(args, "-DNDEBUG");
+#endif
 }
 void gen_float_tables() {
   BuildArgs args = {};
@@ -74,18 +86,6 @@ void run_tests() {
 #else
   arg_alloc(&args, "-O0");
   arg_alloc(&args, "-g");
-#endif
-#if NOLIBC
-  arg_alloc(&args, "-nostdlib");
-  arg_alloc(&args, "-fno-builtin");
-  arg_alloc(&args, "-mno-stack-arg-probe");
-  arg_alloc(&args, "-DNOLIBC");
-#endif
-#if SINGLE_CORE
-  arg_alloc(&args, "-DSINGLE_CORE");
-#endif
-#if NDEBUG
-  arg_alloc(&args, "-DNDEBUG");
 #endif
   // compile
   // TODO: delete .pdb, .rdi?

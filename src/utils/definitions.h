@@ -1,8 +1,8 @@
 #pragma once
-// IWYU pragma: begin_exports
+/* IWYU pragma: begin_exports */
 #include <stdbool.h>
 #include <stdint.h>
-// IWYU pragma: end_exports
+/* IWYU pragma: end_exports */
 
 // Size
 #define ASSERT(condition)        _Static_assert((condition), #condition)
@@ -252,11 +252,12 @@ extern void *memset(void *ptr, int x, Size size) {
 #else
 /* IWYU pragma: begin_exports */
   #include <math.h>
-  #include <string.h>
+  #include <string.h> /* NOTE: for `memcpy()` */
 /* IWYU pragma: end_exports */
 #endif
 
 // types
+typedef unsigned __int128 u128;
 typedef uint64_t u64;
 #define u64(x) ((u64)(x))
 typedef uint32_t u32;
@@ -275,6 +276,7 @@ typedef uint8_t u8;
 #define MIN_u8  u8(0)
 #define MAX_u8  u8(0xff)
 
+typedef __int128 i128;
 typedef int64_t i64;
 #define i64(x) ((i64)(x))
 typedef int32_t i32;
@@ -324,6 +326,10 @@ ASSERT(sizeof(f16) == 2);
 #endif
 
 // builtins - https://clang.llvm.org/docs/LanguageExtensions.html#builtin-functions
+#ifndef typeof
+  #define typeof(x) __typeof__(x)
+#endif
+#define sizeof_bits(x)         (sizeof(x) * 8)
 #define countof(x)             (intptr(sizeof(x)) / intptr(sizeof(x[0])))
 #define alignof(x)             __alignof__(x)
 #define alignof_bits(x)        (alignof(x) * 8)
@@ -394,14 +400,11 @@ ASSERT(__atomic_always_lock_free(4, 0));
 ASSERT(__atomic_always_lock_free(8, 0));
 
 // bits: https://gcc.gnu.org/onlinedocs/gcc/Bit-Operation-Builtins.html
-#define find_first_set(t, v)                    (t)(__builtin_ffsg((t)(v)))
-#define find_first_set_ceil(t, v)               (t)(__builtin_ffsg(((t)(v) - 1) << 1))
-#define count_leading_zeros(t, v)               (t)(__builtin_clzg((t)(v)))
-#define count_trailing_zeros(t, v)              (t)(__builtin_ctzg((t)(v)))
-#define count_leading_redundant_sign_bits(t, v) (t)(__builtin_clrsbg((t)(v)))
-#define count_ones(t, v)                        (t)(__builtin_popcountg((t)(v)))
-#define count_zeros(t, v)                       (t)(__builtin_popcountg(~(t)(v)))
-#define count_parity(t, v)                      (t)(__builtin_parityg((t)(v)))
+#define index_first_one_floor(t, x) ((sizeof_bits(t) - 1) - (t)__builtin_clzg((t)(x)))
+#define index_first_one_ceil(t, x)  index_first_one_floor((x - 1) << 1);
+#define count_ones(t, x)            (t)(__builtin_popcountg((t)(x)))
+#define count_zeros(t, x)           (t)(__builtin_popcountg(~(t)(x)))
+#define count_parity(t, x)          (count_ones(t, x) & 1)
 
 // overflow: https://gcc.gnu.org/onlinedocs/gcc/Integer-Overflow-Builtins.html
 #define add_overflow(a, b, dest)            __builtin_add_overflow(a, b, dest)
