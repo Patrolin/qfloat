@@ -36,7 +36,7 @@
 
 // syscalls
 #if OS_WINDOWS
-typedef struct {
+STRUCT(SYSTEM_INFO) {
   union {
     DWORD dwOemId;
     struct {
@@ -53,7 +53,7 @@ typedef struct {
   DWORD dwAllocationGranularity;
   WORD wProcessorLevel;
   WORD wProcessorRevision;
-} SYSTEM_INFO;
+};
 typedef DWORD PTHREAD_START_ROUTINE(rawptr param);
 typedef enum : DWORD {
   STACK_SIZE_PARAM_IS_A_RESERVATION = 0x00010000,
@@ -76,10 +76,10 @@ typedef u64 rlim_t;
 typedef enum : CUINT {
   RLIMIT_STACK = 3,
 } ResourceType;
-typedef struct {
+STRUCT(rlimit) {
   rlim_t rlim_cur;
   rlim_t rlim_max;
-} rlimit;
+};
 intptr getrlimit(ResourceType key, rlimit *value) {
   return syscall2(SYS_getrlimit, key, (uintptr)value);
 }
@@ -104,10 +104,10 @@ typedef enum : u64 {
 } SignalType;
 // https://nullprogram.com/blog/2023/03/23/
 typedef CUINT _linux_thread_entry(rawptr);
-typedef alignto(16) struct {
+STRUCT2(new_thread_data, 16) {
   _linux_thread_entry *entry;
   rawptr param;
-} new_thread_data;
+};
 naked intptr newthread(ThreadFlags flags, new_thread_data *stack) {
   #if ARCH_X64
   asm volatile("mov eax, 56;" // rax = SYS_clone
@@ -124,10 +124,10 @@ typedef enum : CINT {
   FUTEX_WAKE = 1,
 } FutexOp;
 typedef intptr time_t;
-typedef struct {
+STRUCT(timespec) {
   time_t t_sec;
   time_t t_nsec;
-} timespec;
+};
 intptr futex_wait(u32 *address, u32 while_value, readonly timespec *timeout) {
   return syscall4(SYS_futex, (uintptr)address, FUTEX_WAIT, while_value, (uintptr)timeout);
 }
@@ -141,7 +141,7 @@ intptr futex_wake(u32 *address, u32 count_to_wake) {
 // shared data
 DISTINCT(u32, Thread);
 #define Thread(x) ((Thread)(x))
-typedef alignto(32) struct {
+STRUCT2(ThreadInfo, 32) {
   /* NOTE: barriers must be u32 on linux... */
   Thread threads_start;
   Thread threads_end;
@@ -152,14 +152,14 @@ typedef alignto(32) struct {
   /* NOTE: alternate between [counter, thread_count] and [thread_count, counter] */
   u32 join_barrier;
   u32 join_barrier_counter;
-} ThreadInfo;
+};
 ASSERT(sizeof(ThreadInfo) == 32);
 ASSERT(alignof(ThreadInfo) == 32);
-typedef struct {
+STRUCT(Threads) {
   u32 logical_core_count;
   u64 *values;
   ThreadInfo thread_infos[] flexible(logical_core_count);
-} Threads;
+};
 ASSERT(sizeof(Threads) == 32);
 ASSERT(alignof(Threads) == 32);
 global Threads *global_threads;

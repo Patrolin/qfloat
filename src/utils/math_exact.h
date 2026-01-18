@@ -2,11 +2,11 @@
 #include "builtin.h"
 
 // Integer slice
-typedef struct {
+STRUCT(Integer) {
   /* NOTE: two's complement chunks */
   u64 *chunks;
   u64 chunks_size;
-} Integer;
+};
 #define integer_stack_alloc(stack, size)        ((Integer){stack_alloc_array(stack, u64, size), size})
 #define integer_sign_extension(a)               (a.chunks[a.chunks_size - 1] >> 63 ? u64(-1) : 0)
 #define integer_get_chunk(a, i, sign_extension) (i < a.chunks_size ? a.chunks[i] : sign_extension)
@@ -217,7 +217,7 @@ Integer *integer_div(Integer *restrict a, Integer *restrict b) {
 }
 
 // Rational
-typedef struct {
+STRUCT(Rational) {
   Integer *a;
   Integer *b;
-} Rational;
+};

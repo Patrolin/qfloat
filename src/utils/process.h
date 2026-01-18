@@ -30,7 +30,7 @@ noreturn_ abort() {
 
 // build system
 #if OS_WINDOWS
-typedef struct {
+STRUCT(STARTUPINFOA) {
   DWORD cb;
   rcstring lpReserved;
   rcstring lpDesktop;
@@ -49,13 +49,13 @@ typedef struct {
   Handle hStdInput;
   Handle hStdOutput;
   Handle hStdError;
-} STARTUPINFOA;
-typedef struct {
+};
+STRUCT(PROCESS_INFORMATION) {
   Handle hProcess;
   Handle hThread;
   DWORD dwProcessId;
   DWORD dwThreadId;
-} PROCESS_INFORMATION;
+};
 foreign BOOL CreateProcessA(
   rcstring application_path,
   cstring command,
@@ -73,10 +73,10 @@ foreign ModuleHandle LoadLibraryA(rcstring dll_path);
 rawptr GetProcAddress(ModuleHandle module, cstring proc_name);
 #endif
 
-typedef struct {
+STRUCT(BuildArgs) {
   string *start;
   Size count;
-} BuildArgs;
+};
 #define arg_alloc(args, arg) arg_alloc_impl(args, string(arg))
 #define arg_alloc2(args, arg1, arg2)  \
   arg_alloc_impl(args, string(arg1)); \

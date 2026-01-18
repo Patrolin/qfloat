@@ -21,11 +21,11 @@ typedef uint16_t wchar;
 CINT _fltused = 0;
 #endif
 
-typedef struct {
+STRUCT(SECURITY_ATTRIBUTES) {
   DWORD nLength;
   rawptr lpSecurityDescriptor;
   BOOL bInheritHandle;
-} SECURITY_ATTRIBUTES;
+};
 
 #define TIME_INFINITE (DWORD)(-1)
 typedef enum : DWORD {

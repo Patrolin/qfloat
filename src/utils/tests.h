@@ -14,11 +14,11 @@ u64 random_u64(u64 seed) {
   return seed * PRIME_u64;
 }
 
-typedef struct {
+STRUCT(TestGroup) {
   string name;
   u64 test_count;
   u64 fail_count;
-} TestGroup;
+};
 bool nonnull_(2) test_group(Thread t, TestGroup **group, string name, Thread thread_count) {
   if (expect_near(t == 0)) {
     *group = arena_alloc(global_arena, TestGroup);
@@ -39,11 +39,11 @@ void test_summary(Thread t, TestGroup *group) {
 
 // #define Test(t1, t2) Test_##t1##_##t2
 #define Test(t1, t2) Test
-#define TEST(t1, t2) \
-  typedef struct {   \
-    t1 in;           \
-    t2 out;          \
-  } Test(t1, t2)
+#define TEST(t1, t2)     \
+  STRUCT(Test(t1, t2)) { \
+    t1 in;               \
+    t2 out;              \
+  }
 #define check(thread, group, condition, t1, v1)         check_impl(__COUNTER__, thread, group, condition, t1, v1)
 #define check_impl(C, thread, group, condition, t1, v1) ({                                                          \
   u64 VAR(test_count, C) = atomic_add_fetch(&group->test_count, 1);                                                 \

@@ -5,22 +5,26 @@
 /* IWYU pragma: end_exports */
 
 // Size
-#define ASSERT(condition)        _Static_assert((condition), #condition)
-#define ASSERT_MUlTIPLE_OF(a, b) ASSERT(a % b == 0)
-#define ASSERT_POWER_OF_TWO(a)   ASSERT(count_ones(uintptr, a) == 1);
+#define ASSERT(condition)      _Static_assert((condition), #condition)
+#define ASSERT_POWER_OF_TWO(a) ASSERT(count_ones(uintptr, a) == 1)
 #define DISTINCT(type, name) \
   typedef type name
-#define OPAQUE(name) typedef struct name name;
+#define OPAQUE(name) typedef struct name name
+/* NOTE: helper for self-referential structs */
+#define STRUCT(name)        \
+  typedef struct name name; \
+  struct name
+#define STRUCT2(name, alignment) \
+  typedef struct name name;      \
+  struct alignto(alignment) name
 
+typedef void *rawptr;
+#define rawptr(x) ((rawptr)(x))
+typedef uintptr_t uintptr;
+#define uintptr(x) ((uintptr)(x))
 typedef char byte;
 #define byte(x) ((byte)(x))
 ASSERT(sizeof(byte) == 1);
-typedef uintptr_t uintptr;
-#define uintptr(x) ((uintptr)(x))
-typedef intptr_t intptr;
-#define intptr(x) ((intptr)(x))
-typedef void *rawptr;
-#define rawptr(x) ((rawptr)(x))
 typedef enum : uintptr {
   Byte = 1,
   KibiByte = 1024 * Byte,
@@ -33,14 +37,18 @@ typedef enum : uintptr {
 #define max(a, b)   ((a) > (b) ? (a) : (b))
 #define MIN(t)      CONCAT(MIN_, t)
 #define MAX(t)      CONCAT(MAX_, t)
-#define MIN_byte    byte(0)
-#define MAX_byte    byte(255)
 #define MIN_uintptr uintptr(0)
 #define MAX_uintptr uintptr(-1)
+#define MIN_byte    byte(0)
+#define MAX_byte    byte(-1)
 #define MIN_Size    Size(0)
 #define MAX_Size    Size(-1)
-#define MIN_intptr  (intptr(-1) >> intptr(1))
-#define MAX_intptr  intptr(-1)
+
+typedef intptr_t intptr;
+#define intptr(x) ((intptr)(x))
+
+#define MAX_intptr intptr(MAX_uintptr >> 1)
+#define MIN_intptr (~MAX_intptr)
 
 // OS_xxx
 #define OS_WINDOWS 0
@@ -178,17 +186,17 @@ ASSERT(OS_HUGE_PAGE_SIZE == 2 * MebiByte);
 #define assume_noalias(ptr1, ptr2)      __builtin_assume_separate_storage(ptr1, ptr2)
 
 // utf8 strings
-typedef struct {
+STRUCT(Bytes) {
   byte *ptr;
   Size size;
-} Bytes;
+};
 /* NOTE: don't typedef, so that readonly cstring works correctly */
 #define cstring  char *
 #define rcstring readonly char *
-typedef struct {
+STRUCT(string) {
   readonly byte *ptr;
   Size size;
-} string;
+};
 /* NOTE: we take the pointer of the cstring directly to avoid a memcpy() */
 #define string(rcstr)        ((string){rcstr, sizeof(rcstr) - 1})
 #define str_slice(str, i, j) ((string){&str.ptr[i], j < i ? 0 : Size(j) - Size(i)})
@@ -258,6 +266,7 @@ extern void *memset(void *ptr, int x, Size size) {
 
 // types
 typedef unsigned __int128 u128;
+#define u128(x) ((u128)x)
 typedef uint64_t u64;
 #define u64(x) ((u64)(x))
 typedef uint32_t u32;
@@ -286,14 +295,14 @@ typedef int16_t i16;
 typedef int8_t i8;
 #define i8(x) ((i8)(x))
 
-#define MIN_i64 i64(MAX_u64)
 #define MAX_i64 i64(MAX_u64 >> 1)
-#define MIN_i32 i32(MAX_u32)
+#define MIN_i64 (~MAX_i64)
 #define MAX_i32 i32(MAX_u32 >> 1)
-#define MIN_i16 i16(MAX_u16)
+#define MIN_i32 (~MAX_i32)
 #define MAX_i16 i16(MAX_u16 >> 1)
-#define MIN_i8  i8(MAX_u8)
+#define MIN_i16 (~MAX_i16)
 #define MAX_i8  i8(MAX_u8 >> 1)
+#define MIN_i8  (~MAX_i8)
 
 // typedef signed char CICHAR;
 // typedef unsigned char CUCHAR;
@@ -393,10 +402,11 @@ ASSERT(sizeof(f16) == 2);
 #define atomic_xor_fetch(ptr, value)                       __atomic_xor_fetch((ptr), (value), __ATOMIC_SEQ_CST)
 #define atomic_fetch_nand(ptr, value)                      __atomic_fetch_nand((ptr), (value), __ATOMIC_SEQ_CST)
 #define atomic_nand_fetch(ptr, value)                      __atomic_nand_fetch((ptr), (value), __ATOMIC_SEQ_CST)
-ASSERT(__atomic_always_lock_free(1, 0));
-ASSERT(__atomic_always_lock_free(2, 0));
-ASSERT(__atomic_always_lock_free(4, 0));
-ASSERT(__atomic_always_lock_free(8, 0));
+// ASSERT(__atomic_always_lock_free(sizeof(u128), 0)); /* NOTE: seemingly a bug in clang - should return true, but doesn't */
+ASSERT(__atomic_always_lock_free(sizeof(u64), 0));
+ASSERT(__atomic_always_lock_free(sizeof(u32), 0));
+ASSERT(__atomic_always_lock_free(sizeof(u16), 0));
+ASSERT(__atomic_always_lock_free(sizeof(u8), 0));
 
 // bits: https://gcc.gnu.org/onlinedocs/gcc/Bit-Operation-Builtins.html
 #define index_first_one_floor(t, x) ((sizeof_bits(t) - 1) - (t)__builtin_clzg((t)(x)))
