@@ -32,7 +32,7 @@ void ring_buffer_write_or_wait(RingBuffer *rb, u64 value) {
   atomic_store(&ptr->written, 1);
 }
 bool ring_buffer_read(RingBuffer *rb, u64 *value_ptr) {
-  // NOTE: if there is only 1 reader, then wait-free population oblivious, else wait-free
+  // NOTE: if there is only 1 reader, then wait-free population oblivious, else lock-free
   i32 *read_index_ptr = &rb->default_read_index;
   i32 read_index = atomic_load(read_index_ptr);
   while (1) {
@@ -46,9 +46,10 @@ bool ring_buffer_read(RingBuffer *rb, u64 *value_ptr) {
   }
 }
 bool ring_buffer_read_duplicated(RingBuffer *rb, u64 *value_ptr, i32 *read_index_ptr) {
-  // NOTE: if each reader has its own `read_index`, then wait-free population oblivious, else wait-free
+  // NOTE: if each reader has its own `read_index_ptr`, then wait-free population oblivious, else lock-free
   i32 read_index = atomic_load(read_index_ptr);
   i32 write_index = rb->write_index;
+  assert2(write_index - read_index <= RING_BUFFER_SIZE, string("RingBuffer underrun"));
   while (1) {
     RingBufferValue *ptr = (RingBufferValue *)((rb->buffer + read_index) & (RING_BUFFER_SIZE - 1));
     if (write_index - read_index <= 0 || ptr->written == 0) return false;

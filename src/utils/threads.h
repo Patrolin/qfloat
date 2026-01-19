@@ -3,33 +3,31 @@
 #include "os.h"
 
 /* NOTE:
-                                 blocking - a suspended thread can starve all other threads indefinitely        (`wait_for_mutex(&lock)`)
-                                          - throughput and latency degrade with number of threads
-                          starvation-free - a suspended thread can only starve other threads for a finite time  (`wait_for_ticket_mutex(&lock)`)
-                                          - throughput degrades with number of threads
-                             non-blocking - a suspended thread does not impact other threads
-                         obstruction-free - a thread can only make progress if no other threads are interfering (optimistic reads)
-                                          - can livelock
-                                lock-free - one thread can make progress, but others may starve                 (CAS loops)
-                                          - latency degrades with number of threads
-                                wait-free - all threads can make progress, but one may still starve             (helping + CAS loops)
-                                          - latency degrades with number of threads
-    wait-free population oblivious (WFPO) - all threads can make progress                                       (helping)
-                                          - throughput and latency don't degrade with number of threads
-  TODO: ~make a ringbuffer that's wait-free for SPSC, but lock-free for whichever side has multiple threads~
-        make a wait-free ringbuffer (one thread can get stuck)
-   - MPSC, ... via each thread stack allocates a ring buffer and `barrier_xx()`
-  TODO: WFPO structures?
+                          blocking - a suspended thread can starve all other threads indefinitely        (`wait_for_mutex(&lock)`)
+                                   - throughput and latency degrade with number of threads
+                   starvation-free - a suspended thread can only starve other threads for a finite time  (`wait_for_ticket_mutex(&lock)`)
+                                   - throughput degrades with number of threads
+                      non-blocking - a suspended thread does not impact other threads
+                  obstruction-free - a thread can only make progress if no other threads are interfering (optimistic reads)
+                                   - can livelock
+                         lock-free - one thread can make progress, but others may starve                 (CAS loops)
+                                   - latency degrades with number of threads
+                         wait-free - all threads can make progress, but O(thread_count)                  (helping)
+                                   - latency degrades with number of threads
+    wait-free population oblivious - all threads can make progress, O(1)                                 (atomics + UB)
+                                   - throughput and latency don't degrade with number of threads
   TODO: wait-free alloc(allocator, size, align) {
     AllocOperation my_operation = alloc_operation(size, align);
     allocator->operations[t] = my_operation;
+    Thread in_flight = -1;
     while(1) {
-      Thread in_flight = -1;
       atomic_compare_exchange(&allocator->in_flight, &in_flight, t);
       if (in_flight == -1) {in_flight = t}
       // ..help the inflight operation
-      atomic_compare_exchange(&allocator->in_flight, in_flight, -1);
-      if (in_flight == t) return;
+      if (in_flight == t) {
+        atomic_compare_exchange(&allocator->in_flight, &in_flight, -1);
+        return;
+      }
     }
   }
 */

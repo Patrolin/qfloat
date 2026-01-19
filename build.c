@@ -1,5 +1,5 @@
-// clang src/build.c -o build.exe -fno-builtin && ./build.exe
-// clang build.c -o build.exe -DNOLIBC -fno-builtin -masm=intel && ./build.exe
+// clang build.c -o build.exe -fno-builtin && ./build.exe
+// clang build.c -o build.exe -fno-builtin -DNOLIBC -masm=intel && ./build.exe
 #pragma push_macro("SINGLE_CORE")
 #define SINGLE_CORE 1
 #include "src/utils/entry.h"
