@@ -11,5 +11,6 @@
 *.out
 *-linux*
 min.c
+src/qfloat_uscale.h
 
 .vscode/settings.json
