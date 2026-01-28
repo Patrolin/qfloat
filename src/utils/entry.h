@@ -35,7 +35,7 @@ forward_declare void main_multicore(Thread t);
 CUINT thread_entry(rawptr param) {
   Thread t = Thread(uintptr(param));
   main_multicore(t);
-  barrier_join_threads(t, 0, global_threads->logical_core_count);
+  barrier_join_threads(t, 0, global_threads.logical_core_count);
   return 0;
 }
 void _init_threads() {
@@ -61,13 +61,13 @@ void _init_threads() {
   #endif
   assert(logical_core_count > 0);
   // start threads
-  global_threads = arena_alloc_flexible(global_arena, Threads, ThreadInfo, logical_core_count);
-  assert(global_threads != 0);
+  ThreadInfo *thread_infos = arena_alloc_array(global_arena, ThreadInfo, logical_core_count);
   u64 *values = arena_alloc_array(global_arena, u64, logical_core_count);
-  global_threads->logical_core_count = logical_core_count;
-  global_threads->values = values;
+  global_threads.logical_core_count = logical_core_count;
+  global_threads.thread_infos = thread_infos;
+  global_threads.values = values;
   for (Thread t = 0; t < logical_core_count; t++) {
-    global_threads->thread_infos[t].threads_end = logical_core_count;
+    global_threads.thread_infos[t].threads_end = logical_core_count;
     if (expect_near(t > 0)) {
   #if OS_WINDOWS
       assert(CreateThread(0, 0, thread_entry, (rawptr)uintptr(t), STACK_SIZE_PARAM_IS_A_RESERVATION, 0) != 0);
