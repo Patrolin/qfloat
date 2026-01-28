@@ -4,16 +4,6 @@
 #include "mem.h"
 #include "threads.h"
 
-// NOTE: qrng from https://extremelearning.com.au/unreasonable-effectiveness-of-quasirandom-sequences/
-/* NOTE: For integers, (any_odd_number*n) % any_power_of_two is guaranteed to hit every number.
-   Evaluate `Round[2^64 / phi]; phi = (1+sqrt(5))/2` in wolfram alpha,
-   then if it's even, add 1 to it.
-*/
-#define PRIME_u64 u64(11400714819323198487ULL)
-u64 random_u64(u64 seed) {
-  return seed * PRIME_u64;
-}
-
 STRUCT(TestGroup) {
   string name;
   u64 test_count;
