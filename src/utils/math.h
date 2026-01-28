@@ -19,9 +19,9 @@ double modulo(double a, double b) {
 // random
 /* NOTE: qrng from https://extremelearning.com.au/unreasonable-effectiveness-of-quasirandom-sequences/
   Evaluate `1/ phi; phi = (1+sqrt(5))/2` in wolfram alpha
-  then round to 17 digits. */
+  then round to 17 digits (including the leading zeros!). */
 #define PHI          1.6180339887498948
-#define ONE_OVER_PHI 0.61803398874989484
+#define ONE_OVER_PHI 0.6180339887498948
 double random(double prev) {
   return remainder((prev + ONE_OVER_PHI), 1.0);
 }
