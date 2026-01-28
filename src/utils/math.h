@@ -28,6 +28,10 @@ f64 random(f64 prev) {
 /* NOTE: For integers, (any_odd_number*n) % any_power_of_two is guaranteed to hit every number.
    Evaluate `Round[2^64 / phi]; phi = (1+sqrt(5))/2` in wolfram alpha,
    then if it's even, add 1 to it. */
-u64 random_u64(u64 seed) {
-  return seed * 11400714819323198487ULL;
+#define U64_OVER_PHI 11400714819323198487ULL
+u64 random_u64(u64 prev) {
+  return prev + U64_OVER_PHI;
+}
+u64 noise_u64(u64 position) {
+  return position * U64_OVER_PHI;
 }
