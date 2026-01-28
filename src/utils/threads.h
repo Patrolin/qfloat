@@ -234,10 +234,10 @@ void barrier_scatter_impl(Thread t, u64 *value) {
 }
 /* gather values from all threads in the current group into a all threads */
 #define barrier_gather(t, value) barrier_gather_impl(t, u64(value))
-ThreadInfo *barrier_gather_impl(Thread t, u64 value) {
+u64 *barrier_gather_impl(Thread t, u64 value) {
   global_threads->values[t] = value;
   barrier(t); /* NOTE: make sure all threads have written their data */
-  return global_threads->thread_infos;
+  return global_threads->values;
 }
 
 // split/join threads
