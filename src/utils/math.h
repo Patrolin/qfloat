@@ -3,7 +3,7 @@
 
 // float
 #define NaN __builtin_nan("")
-/* remainder(a, b), modulo(a, b) for |a/b| < MAX_SAFE_INTEGER, result is undefined if `b == 0.0`
+/* remainder(a, b), modulo(a, b), valid for `|a/b| < MAX_SAFE_INTEGER`, undefined for `b == 0.0`
   NOTE: libc's `fmod()` returns the `remainder()`... */
 double remainder(double a, double b) {
   i64 q_int = (i64)(a / b); // truncate towards zero
