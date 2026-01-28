@@ -5,15 +5,15 @@
 #define NaN __builtin_nan("")
 /* remainder(a, b), modulo(a, b), valid for `|a/b| < MAX_SAFE_INTEGER`, undefined for `b == 0.0`
   NOTE: libc's `fmod()` returns the `remainder()`... */
-double remainder(double a, double b) {
+f64 remainder(f64 a, f64 b) {
   i64 q_int = (i64)(a / b); // truncate towards zero
-  return a - (double)q_int * b;
+  return a - (f64)q_int * b;
 }
-double modulo(double a, double b) {
-  double q = a / b;
-  i64 q_int = (i64)q;                         // truncate towards zero
-  if (q < 0.0 && q != (double)q_int) q_int--; // fixup
-  return a - (double)q_int * b;
+f64 modulo(f64 a, f64 b) {
+  f64 q = a / b;
+  i64 q_int = (i64)q;                      // truncate towards zero
+  if (q < 0.0 && q != (f64)q_int) q_int--; // fixup
+  return a - (f64)q_int * b;
 }
 
 // random
@@ -22,7 +22,7 @@ double modulo(double a, double b) {
   then round to 17 digits (including the leading zeros!). */
 #define PHI          1.6180339887498948
 #define ONE_OVER_PHI 0.6180339887498948
-double random(double prev) {
+f64 random(f64 prev) {
   return remainder((prev + ONE_OVER_PHI), 1.0);
 }
 /* NOTE: For integers, (any_odd_number*n) % any_power_of_two is guaranteed to hit every number.
