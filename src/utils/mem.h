@@ -120,10 +120,10 @@ static ArenaAllocator arena_allocator(Bytes buffer) {
 #define arena_alloc(arena, t)                      ((t *)arena_alloc_impl(arena, sizeof(t), alignof(t) - 1))
 #define arena_alloc_array(arena, t, count)         ((t *)arena_alloc_impl(arena, sizeof(t) * count, alignof(t) - 1))
 #define arena_alloc_flexible(arena, t1, t2, count) ((t1 *)arena_alloc_impl(arena, sizeof(t1) + sizeof(t2) * count, alignof(t1) - 1))
-intptr arena_alloc_impl(ArenaAllocator *arena, Size size, intptr align_mask) {
+intptr arena_alloc_impl(ArenaAllocator *arena, Size size, intptr align_low_mask) {
   // assert(count_ones(align_mask + 1) == 1);
-  intptr ptr = atomic_fetch_add(&arena->next, intptr(size) + align_mask);
-  ptr = align_up(ptr, align_mask + 1);
+  intptr ptr = atomic_fetch_add(&arena->next, intptr(size) + align_low_mask);
+  ptr = align_up(ptr, align_low_mask + 1);
   assert(ptr + intptr(size) <= arena->end);
   memset((byte *)ptr, 0, size);
   return ptr;

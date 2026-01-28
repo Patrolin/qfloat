@@ -134,18 +134,18 @@ Size _free_list_size(uintptr n) {
 #define alloc_array(t, count)          ((t *)_alloc_preprocess(allocator, sizeof(t) * count, alignof(t)))
 #define alloc_flexible(t1, t2, count)  ((t1 *)_alloc_preprocess(allocator, sizeof(t1) + sizeof(t2) * count, alignof(t1)))
 #define _alloc_preprocess(size, align) _alloc_impl(&global_allocator, size, max(align, alignof(UsedBlockPrefix)) - 1)
-intptr _alloc_impl(GeneralAllocator *allocator, Size size, Size align_mask) {
+intptr _alloc_impl(GeneralAllocator *allocator, Size size, Size align_low_mask) {
   if (expect_far(size == 0)) return 0;
   //..if too big, just virtual alloc
-  Size padded_size = max(sizeof(AllocatorBlockCommon) + sizeof(UsedBlockPrefix) + align_mask + size, sizeof(FreeBlockHeader));
+  Size padded_size = max(sizeof(AllocatorBlockCommon) + sizeof(UsedBlockPrefix) + align_low_mask + size, sizeof(FreeBlockHeader));
   intptr ptr = _free_list_get(allocator, padded_size);
   if (ptr == 0) {
     padded_size = (Size)align_up(intptr(padded_size), alignof(FreeBlockHeader));
     ptr = atomic_fetch_add(&allocator->next, intptr(padded_size));
     assert(ptr + intptr(size) <= allocator->end);
   }
-  intptr align_offset = intptr(align_mask + 1) - (ptr & intptr(align_mask));
-  ptr = align_up(ptr, intptr(align_mask + 1));
+  intptr align_offset = intptr(align_low_mask + 1) - (ptr & intptr(align_low_mask)); // NOTE: gets optimized into `align_up()`
+  ptr = align_up(ptr, intptr(align_low_mask + 1));
   *(UsedBlockPrefix *)(ptr - intptr(sizeof(UsedBlockPrefix))) = (UsedBlockPrefix)align_offset;
   memset((byte *)ptr, 0, size);
   return 0;
