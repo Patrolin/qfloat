@@ -237,10 +237,12 @@ typedef enum : uintptr {
 #define assert(condition) assert2(condition, string(" " __FILE__ ":" STR(__LINE__) " assert(" #condition ")\n"))
 
 // CRT
+#define NaN     __builtin_nan("")
+#define absg(x) ((x) < 0) ? (-(x)) : (x)
+/* NOTE: libc's `fmod()` returns the `remainder()`... */
+#define remainder(a, b) ((a) - __builtin_trunc((a) / (b)) * b)
+#define modulo(a, b)    ((a) - __builtin_floor((a) / (b)) * b)
 #if NOLIBC
-  #define abs(x)   (x < 0) ? (-(x)) : (x)
-  #define labs(x)  (x < 0) ? (-(x)) : (x)
-  #define llabs(x) (x < 0) ? (-(x)) : (x)
 extern void *memcpy(void *dest, readonly void *src, Size size) {
   void *dest_end = dest + size;
   while (dest < dest_end) {
@@ -259,7 +261,6 @@ extern void *memset(void *ptr, int x, Size size) {
 }
 #else
 /* IWYU pragma: begin_exports */
-  #include <math.h>
   #include <string.h> /* NOTE: for `memcpy()` */
 /* IWYU pragma: end_exports */
 #endif

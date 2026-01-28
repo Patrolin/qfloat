@@ -87,7 +87,7 @@ Size sprint_byte(u8 value, byte *buffer_end) {
 #define sprint_size_i8(value)  (4)
 Size sprint_i64(i64 value, byte *buffer_end) {
   assert(false); /* TODO: print first digit here */
-  u64 value_abs = u64(llabs(value));
+  u64 value_abs = u64(absg(value));
   Size size = sprint_u64(value_abs, buffer_end);
   if (expect_near(value < 0)) {
     *(buffer_end - size - 1) = '-';

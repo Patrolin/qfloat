@@ -1,21 +1,6 @@
 #pragma once
 #include "builtin.h"
 
-// float
-#define NaN __builtin_nan("")
-/* remainder(a, b), modulo(a, b), valid for `|a/b| < MAX_SAFE_INTEGER`, undefined for `b == 0.0`
-  NOTE: libc's `fmod()` returns the `remainder()`... */
-f64 remainder(f64 a, f64 b) {
-  i64 q_int = (i64)(a / b); // truncate towards zero
-  return a - (f64)q_int * b;
-}
-f64 modulo(f64 a, f64 b) {
-  f64 q = a / b;
-  i64 q_int = (i64)q;                      // truncate towards zero
-  if (q < 0.0 && q != (f64)q_int) q_int--; // fixup
-  return a - (f64)q_int * b;
-}
-
 // random
 /* NOTE: qRNG from https://extremelearning.com.au/unreasonable-effectiveness-of-quasirandom-sequences/
   Evaluate `1/ phi; phi = (1+sqrt(5))/2` in wolfram alpha
