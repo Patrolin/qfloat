@@ -112,12 +112,9 @@ STRUCT(ArenaAllocator) {
   intptr next;
   intptr end;
 };
-global ArenaAllocator *global_arena;
-ArenaAllocator *arena_allocator(Bytes buffer) {
-  ArenaAllocator *arena = (ArenaAllocator *)buffer.ptr;
-  arena->next = intptr(buffer.ptr + sizeof(ArenaAllocator));
-  arena->end = intptr(buffer.ptr + buffer.size);
-  return arena;
+global ArenaAllocator global_arena;
+static ArenaAllocator arena_allocator(Bytes buffer) {
+  return (ArenaAllocator){intptr(buffer.ptr), intptr(buffer.ptr + buffer.size)};
 }
 
 #define arena_alloc(arena, t)                      ((t *)arena_alloc_impl(arena, sizeof(t), alignof(t) - 1))

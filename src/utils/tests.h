@@ -21,7 +21,7 @@ STRUCT(TestGroup) {
 };
 bool nonnull_(2) test_group(Thread t, TestGroup **group, string name, Thread thread_count) {
   if (expect_near(t == 0)) {
-    *group = arena_alloc(global_arena, TestGroup);
+    *group = arena_alloc(&global_arena, TestGroup);
     **group = (TestGroup){.name = name};
   }
   barrier_scatter(t, group);

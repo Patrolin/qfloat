@@ -61,8 +61,8 @@ void _init_threads() {
   #endif
   assert(logical_core_count > 0);
   // start threads
-  ThreadInfo *thread_infos = arena_alloc_array(global_arena, ThreadInfo, logical_core_count);
-  u64 *values = arena_alloc_array(global_arena, u64, logical_core_count);
+  ThreadInfo *thread_infos = arena_alloc_array(&global_arena, ThreadInfo, logical_core_count);
+  u64 *values = arena_alloc_array(&global_arena, u64, logical_core_count);
   global_threads.logical_core_count = logical_core_count;
   global_threads.thread_infos = thread_infos;
   global_threads.values = values;
