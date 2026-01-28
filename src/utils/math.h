@@ -17,7 +17,7 @@ double modulo(double a, double b) {
 }
 
 // random
-/* NOTE: qrng from https://extremelearning.com.au/unreasonable-effectiveness-of-quasirandom-sequences/
+/* NOTE: qRNG from https://extremelearning.com.au/unreasonable-effectiveness-of-quasirandom-sequences/
   Evaluate `1/ phi; phi = (1+sqrt(5))/2` in wolfram alpha
   then round to 17 digits (including the leading zeros!). */
 #define PHI          1.6180339887498948
