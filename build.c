@@ -44,8 +44,8 @@ void set_c99(BuildArgs *args) {
 #if SINGLE_CORE
   arg_alloc(args, "-DSINGLE_CORE");
 #endif
-#if NDEBUG
-  arg_alloc(args, "-DNDEBUG");
+#if DEBUG
+  arg_alloc(args, "-DDEBUG");
 #endif
 }
 void gen_float_tables() {

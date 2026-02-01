@@ -312,7 +312,7 @@ qfloat_f64 qfloat_parse_f64_decimal(const char *_Nonnull str, qfloat_intptr str_
   // significand
   qfloat_intptr exponent_base10;
   qfloat_dd value = qfloat_parse_f64_significand(str, str_size, i, &i, &exponent_base10);
-#ifndef NDEBUG
+#ifdef DEBUG
   printf("\nstr:        %s", str);
   printf("\nsignificand: %.17g, %.17g, %lli", value.high, value.low, exponent_base10);
 #endif
@@ -321,7 +321,7 @@ qfloat_f64 qfloat_parse_f64_decimal(const char *_Nonnull str, qfloat_intptr str_
     i++;
     exponent_base10 += qfloat_parse_i64_decimal(str, str_size, i, &i);
   }
-#ifndef NDEBUG
+#ifdef DEBUG
   printf("\nexponent: %lli", exponent_base10);
 #endif
   while (exponent_base10 < 0) {
