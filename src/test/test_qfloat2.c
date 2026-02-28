@@ -29,10 +29,10 @@ void main_multicore(Thread t) {
       {string("1"), 1},
       {string("18446744073709551615"), 18446744073709551615ULL},
     };
-    for (intptr i = 0; i < countof(tests); i++) {
+    for (iptr i = 0; i < countof(tests); i++) {
       Test test = tests[i];
-      intptr end;
-      u64 parsed = qf_parse_u64_decimal(test.in.ptr, (intptr)test.in.size, 0, &end);
+      iptr end;
+      u64 parsed = qf_parse_u64_decimal(test.in.ptr, (iptr)test.in.size, 0, &end);
       check(t, group, parsed == test.out, u64, parsed);
     }
   }
@@ -47,10 +47,10 @@ void main_multicore(Thread t) {
       {string("-9223372036854775808"), (int64_t)9223372036854775808ULL},
       {string("-9223372036854775808"), -(int64_t)9223372036854775807ULL - 1},
     };
-    for (intptr i = 0; i < countof(tests); i++) {
+    for (iptr i = 0; i < countof(tests); i++) {
       Test test = tests[i];
-      intptr end;
-      i64 parsed = qf_parse_i64_decimal(test.in.ptr, (intptr)test.in.size, 0, &end);
+      iptr end;
+      i64 parsed = qf_parse_i64_decimal(test.in.ptr, (iptr)test.in.size, 0, &end);
       check(t, group, parsed == test.out, i64, parsed);
     }
   }
@@ -66,10 +66,10 @@ void main_multicore(Thread t) {
       {string("FEDCAB"), 0xFEDCAB},
       {string("FFFFFFFFFFFFFFFF"), 0xFFFFFFFFFFFFFFFF},
     };
-    for (intptr i = 0; i < countof(tests); i++) {
+    for (iptr i = 0; i < countof(tests); i++) {
       Test test = tests[i];
-      intptr end;
-      u64 parsed = qf_parse_u64_hex(test.in.ptr, (intptr)test.in.size, 0, &end);
+      iptr end;
+      u64 parsed = qf_parse_u64_hex(test.in.ptr, (iptr)test.in.size, 0, &end);
       check(t, group, parsed == test.out, u64, parsed);
     }
   }
@@ -85,11 +85,11 @@ void main_multicore(Thread t) {
       {string("654321"), 654321},
       {string("123456789.01234567"), 12345678901234567},
     };
-    for (intptr i = 0; i < countof(tests); i++) {
+    for (iptr i = 0; i < countof(tests); i++) {
       Test test = tests[i];
-      intptr end;
+      iptr end;
       int32_t exponent_base10;
-      u64 parsed = qf_parse_f64_significand(test.in.ptr, (intptr)test.in.size, 0, &end, &exponent_base10);
+      u64 parsed = qf_parse_f64_significand(test.in.ptr, (iptr)test.in.size, 0, &end, &exponent_base10);
       check(t, group, parsed == test.out, u64, parsed);
     }
   }
@@ -98,8 +98,8 @@ void main_multicore(Thread t) {
   if (single_core(t)) {
     // string s = string("1.5");
     string s = string("10000000000000000000");
-    intptr end;
-    f64 parsed = qf_parse_f64(s.ptr, (intptr)s.size, 0, &end);
+    iptr end;
+    f64 parsed = qf_parse_f64(s.ptr, (iptr)s.size, 0, &end);
     assert(parsed == 10000000000000000000.0);
   }
   // TODO: test formatting floats

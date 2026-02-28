@@ -61,12 +61,12 @@ DISTINCT(Handle, ThreadHandle);
   #pragma comment(lib, "Synchronization.lib")
 foreign void GetSystemInfo(SYSTEM_INFO *lpSystemInfo);
 foreign ThreadHandle CreateThread(readonly SECURITY_ATTRIBUTES *security,
-                                  Size stack_size,
+                                  usize stack_size,
                                   PTHREAD_START_ROUTINE start_proc,
                                   readonly rawptr param,
                                   DWORD flags,
                                   DWORD *thread_id);
-foreign void WaitOnAddress(volatile rawptr address, readonly rawptr while_value, Size address_size, DWORD timeout);
+foreign void WaitOnAddress(volatile rawptr address, readonly rawptr while_value, usize address_size, DWORD timeout);
 foreign void WakeByAddressAll(readonly rawptr address);
 #elif OS_LINUX
 typedef CINT pid_t;
@@ -78,11 +78,11 @@ STRUCT(rlimit) {
   rlim_t rlim_cur;
   rlim_t rlim_max;
 };
-intptr getrlimit(ResourceType key, rlimit *value) {
-  return syscall2(SYS_getrlimit, key, (uintptr)value);
+iptr getrlimit(ResourceType key, rlimit *value) {
+  return syscall2(SYS_getrlimit, key, (uptr)value);
 }
-intptr sched_getaffinity(pid_t pid, Size masks_size, u8 *masks) {
-  return syscall3(SYS_sched_getaffinity, (uintptr)pid, masks_size, (uintptr)masks);
+iptr sched_getaffinity(pid_t pid, usize masks_size, u8 *masks) {
+  return syscall3(SYS_sched_getaffinity, (uptr)pid, masks_size, (uptr)masks);
 };
 
 typedef enum : CUINT {
@@ -106,7 +106,7 @@ STRUCT2(new_thread_data, 16) {
   _linux_thread_entry *entry;
   rawptr param;
 };
-naked intptr newthread(ThreadFlags flags, new_thread_data *stack) {
+naked iptr newthread(ThreadFlags flags, new_thread_data *stack) {
   #if ARCH_X64
   asm volatile("mov eax, 56;" // rax = SYS_clone
                "syscall;"
@@ -121,16 +121,16 @@ typedef enum : CINT {
   FUTEX_WAIT = 0,
   FUTEX_WAKE = 1,
 } FutexOp;
-typedef intptr time_t;
+typedef iptr time_t;
 STRUCT(timespec) {
   time_t t_sec;
   time_t t_nsec;
 };
-intptr futex_wait(u32 *address, u32 while_value, readonly timespec *timeout) {
-  return syscall4(SYS_futex, (uintptr)address, FUTEX_WAIT, while_value, (uintptr)timeout);
+iptr futex_wait(u32 *address, u32 while_value, readonly timespec *timeout) {
+  return syscall4(SYS_futex, (uptr)address, FUTEX_WAIT, while_value, (uptr)timeout);
 }
-intptr futex_wake(u32 *address, u32 count_to_wake) {
-  return syscall3(SYS_futex, (uintptr)address, FUTEX_WAKE, count_to_wake);
+iptr futex_wake(u32 *address, u32 count_to_wake) {
+  return syscall3(SYS_futex, (uptr)address, FUTEX_WAKE, count_to_wake);
 }
 #else
 // ASSERT(false);

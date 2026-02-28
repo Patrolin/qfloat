@@ -17,8 +17,8 @@ typedef enum : CUINT {
   O_TRUNC = 1 << 9,
   O_DIRECTORY = 1 << 16,
 } FileFlags;
-intptr open(rcstring path, FileFlags flags, CUINT mode) {
-  return syscall3(SYS_open, (uintptr)path, flags, mode);
+iptr open(rcstring path, FileFlags flags, CUINT mode) {
+  return syscall3(SYS_open, (uptr)path, flags, mode);
 }
 #endif
 

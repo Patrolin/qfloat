@@ -12,11 +12,11 @@ STRUCT(Integer) {
 #define integer_get_chunk(a, i, sign_extension) (i < a.chunks_size ? a.chunks[i] : sign_extension)
 
 /* NOTE: we can't use `restrict`, as we sometimes want to do stuff like `x += y` */
-void integer_shift_left(Integer *result, Integer a, uintptr shift) {
+void integer_shift_left(Integer *result, Integer a, uptr shift) {
   u64 chunks_size = result->chunks_size;
   // zero
-  intptr i = 0;
-  intptr j = shift / 64;
+  iptr i = 0;
+  iptr j = shift / 64;
   do {
     result->chunks[i++] = 0;
   } while (i < j && i < chunks_size);
@@ -36,14 +36,14 @@ void integer_shift_left(Integer *result, Integer a, uintptr shift) {
     result->chunks[i++] = sign_extension;
   }
 }
-void integer_shift_right(Integer *result, Integer a, uintptr shift, bool sign_extend) {
+void integer_shift_right(Integer *result, Integer a, uptr shift, bool sign_extend) {
   u64 chunks_size = result->chunks_size;
   // sign extend
   u64 sign_extension = integer_sign_extension(a);
   if (!sign_extend) { sign_extension = 0; }
-  intptr i = intptr(chunks_size);
-  intptr j = intptr(a.chunks_size - (shift / 64));
-  intptr sign_extend_end = max(j, 0);
+  iptr i = iptr(chunks_size);
+  iptr j = iptr(a.chunks_size - (shift / 64));
+  iptr sign_extend_end = max(j, 0);
   do {
     result->chunks[--i] = sign_extension;
   } while (i > sign_extend_end);
@@ -64,7 +64,7 @@ void integer_shift_right(Integer *result, Integer a, uintptr shift, bool sign_ex
 }
 void integer_copy(Integer *result, Integer a) {
   // copy
-  intptr i = 0;
+  iptr i = 0;
   u64 chunks_size = a.chunks_size;
   do {
     result->chunks[i] = a.chunks[i];
@@ -79,7 +79,7 @@ void integer_copy(Integer *result, Integer a) {
 #define integer_not_size(a) (a.chunks_size)
 void integer_not(Integer *result, Integer a) {
   // not
-  intptr i = 0;
+  iptr i = 0;
   u64 carry = 1;
   u64 chunks_size = a.chunks_size;
   do {
@@ -96,7 +96,7 @@ void integer_not(Integer *result, Integer a) {
 #define integer_negate_size(a) (a.chunks_size + 1)
 void integer_negate(Integer *result, Integer a) {
   // negate
-  intptr i = 0;
+  iptr i = 0;
   u64 carry = 1;
   u64 chunks_size = a.chunks_size;
   do {
@@ -113,7 +113,7 @@ void integer_negate(Integer *result, Integer a) {
 }
 #define integer_add_size(a, b) (max(a.chunks_size, b.chunks_size) + 1)
 void integer_add(Integer *result, Integer a, Integer b) {
-  intptr i = 0;
+  iptr i = 0;
   u64 carry = 0;
   u64 extension_a = integer_sign_extension(a);
   u64 extension_b = integer_sign_extension(b);
@@ -127,7 +127,7 @@ void integer_add(Integer *result, Integer a, Integer b) {
 }
 #define integer_sub_size(a, b) integer_add_size(a, b)
 void integer_sub(Integer *result, Integer a, Integer b) {
-  intptr i = 0;
+  iptr i = 0;
   u64 borrow = 0;
   u64 extension_a = integer_sign_extension(a);
   u64 extension_b = integer_sign_extension(b);
@@ -147,7 +147,7 @@ void _integer_karatsuba_mul(Integer *result, Integer a, Integer b) {
     result->chunks[0] = result_128 & (u64)-1;
     result->chunks[1] = u64(result_128 >> 64);
   } else {
-    intptr split = a.chunks_size / 2;
+    iptr split = a.chunks_size / 2;
     Integer A = (Integer){a.chunks + split, u64(split)};
     Integer C = (Integer){a.chunks, u64(split)};
     Integer B = (Integer){b.chunks + split, u64(split)};
@@ -171,7 +171,7 @@ void _integer_karatsuba_mul(Integer *result, Integer a, Integer b) {
       // merge result_0
       integer_copy(result, result_0);
       // merge result_1
-      intptr i = split;
+      iptr i = split;
       u64 carry = 0;
       u64 extension = integer_sign_extension(result_1);
       u64 chunks_size = result->chunks_size;

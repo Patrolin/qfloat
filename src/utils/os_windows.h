@@ -36,7 +36,7 @@ typedef enum : DWORD {
 } WaitResult;
 
 // common
-DISTINCT(uintptr, Handle);
+DISTINCT(uptr, Handle);
 DISTINCT(Handle, FileHandle);
 #define INVALID_HANDLE (Handle)(-1)
 foreign bool CloseHandle(Handle handle);

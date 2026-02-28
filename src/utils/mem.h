@@ -13,7 +13,7 @@ STRUCT(EXCEPTION_RECORD) {
   struct EXCEPTION_RECORD *ExceptionRecord;
   rawptr ExceptionAddress;
   DWORD NumberParameters;
-  uintptr ExceptionInformation[EXCEPTION_MAXIMUM_PARAMETERS];
+  uptr ExceptionInformation[EXCEPTION_MAXIMUM_PARAMETERS];
 };
 
 OPAQUE(CONTEXT);
@@ -39,9 +39,9 @@ typedef enum : DWORD {
 } AllocProtectFlags;
 
 // foreign ExceptionFilter* SetUnhandledExceptionFilter(ExceptionFilter filter_callback);
-foreign Handle AddVectoredExceptionHandler(uintptr run_first, ExceptionFilter handler);
-foreign intptr VirtualAlloc(intptr address, Size size, AllocTypeFlags type_flags, AllocProtectFlags protect_flags);
-foreign BOOL VirtualFree(intptr address, Size size, AllocTypeFlags type_flags);
+foreign Handle AddVectoredExceptionHandler(uptr run_first, ExceptionFilter handler);
+foreign iptr VirtualAlloc(iptr address, usize size, AllocTypeFlags type_flags, AllocProtectFlags protect_flags);
+foreign BOOL VirtualFree(iptr address, usize size, AllocTypeFlags type_flags);
 #elif OS_LINUX
 typedef enum : u32 {
   PROT_EXEC = 1 << 0,
@@ -55,11 +55,11 @@ typedef enum : u32 {
   MAP_STACK = 1 << 17,
 } AllocTypeFlags;
 
-intptr mmap(rawptr address, Size size, ProtectionFlags protection_flags, AllocTypeFlags type_flags, FileHandle fd, Size offset) {
-  return syscall6(SYS_mmap, (uintptr)address, size, protection_flags, type_flags, (uintptr)fd, offset);
+iptr mmap(rawptr address, usize size, ProtectionFlags protection_flags, AllocTypeFlags type_flags, FileHandle fd, usize offset) {
+  return syscall6(SYS_mmap, (uptr)address, size, protection_flags, type_flags, (uptr)fd, offset);
 }
-intptr munmap(intptr address, Size size) {
-  return syscall2(SYS_munmap, (uintptr)address, size);
+iptr munmap(iptr address, usize size) {
+  return syscall2(SYS_munmap, (uptr)address, size);
 }
 #endif
 
@@ -69,9 +69,9 @@ ExceptionResult _page_fault_handler(_EXCEPTION_POINTERS *exception_info) {
   EXCEPTION_RECORD *exception = exception_info->ExceptionRecord;
   DWORD exception_code = exception->ExceptionCode;
   if (expect_near(exception_code == EXCEPTION_ACCESS_VIOLATION)) {
-    uintptr ptr = exception->ExceptionInformation[1];
-    intptr page_ptr = intptr(ptr) & ~intptr(OS_PAGE_SIZE - 1);
-    intptr commited_ptr = VirtualAlloc(page_ptr, OS_PAGE_SIZE, MEM_COMMIT, PAGE_READWRITE);
+    uptr ptr = exception->ExceptionInformation[1];
+    iptr page_ptr = iptr(ptr) & ~iptr(OS_PAGE_SIZE - 1);
+    iptr commited_ptr = VirtualAlloc(page_ptr, OS_PAGE_SIZE, MEM_COMMIT, PAGE_READWRITE);
     return page_ptr != 0 && commited_ptr != 0 ? EXCEPTION_CONTINUE_EXECUTION : EXCEPTION_EXECUTE_HANDLER;
   }
   return EXCEPTION_EXECUTE_HANDLER;
@@ -83,7 +83,7 @@ void _init_page_fault_handler() {
   #define _init_page_fault_handler()
 #endif
 
-Bytes page_reserve(Size size) {
+Bytes page_reserve(usize size) {
   Bytes buffer;
   buffer.size = size;
 #if OS_WINDOWS
@@ -91,13 +91,13 @@ Bytes page_reserve(Size size) {
   assert(buffer.ptr != 0);
 #elif OS_LINUX
   buffer.ptr = (byte *)mmap(0, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-  assert(intptr(buffer.ptr) != -1);
+  assert(iptr(buffer.ptr) != -1);
 #else
   assert(false);
 #endif
   return buffer;
 }
-void page_free(intptr ptr) {
+void page_free(iptr ptr) {
 #if OS_WINDOWS
   assert(VirtualFree(ptr, 0, MEM_RELEASE));
 #elif OS_LINUX
@@ -109,26 +109,27 @@ void page_free(intptr ptr) {
 
 // wait-free population oblivious arena (not guaranteed to use minimal space)
 STRUCT(ArenaAllocator) {
-  intptr next;
-  intptr end;
+  iptr next;
+  iptr end;
 };
 global ArenaAllocator global_arena;
 static ArenaAllocator arena_allocator(Bytes buffer) {
-  return (ArenaAllocator){intptr(buffer.ptr), intptr(buffer.ptr + buffer.size)};
+  return (ArenaAllocator){iptr(buffer.ptr), iptr(buffer.ptr + buffer.size)};
 }
 
-#define arena_alloc(arena, t)                      ((t *)arena_alloc_impl(arena, sizeof(t), alignof(t) - 1))
-#define arena_alloc_array(arena, t, count)         ((t *)arena_alloc_impl(arena, sizeof(t) * count, alignof(t) - 1))
-#define arena_alloc_flexible(arena, t1, t2, count) ((t1 *)arena_alloc_impl(arena, sizeof(t1) + sizeof(t2) * count, alignof(t1) - 1))
-intptr arena_alloc_impl(ArenaAllocator *arena, Size size, intptr align_low_mask) {
+#define arena_alloc(arena, t)                      ((t *)arena_alloc_size(arena, sizeof(t), alignof(t)))
+#define arena_alloc_array(arena, t, count)         ((t *)arena_alloc_size(arena, sizeof(t) * count, alignof(t)))
+#define arena_alloc_flexible(arena, t1, t2, count) ((t1 *)arena_alloc_size(arena, sizeof(t1) + sizeof(t2) * count, alignof(t1)))
+#define arena_alloc_size(arena, size, align) arena_alloc_impl(arena, size, iptr(align)-1)
+iptr arena_alloc_impl(ArenaAllocator *arena, usize size, iptr align_low_mask) {
   // assert(count_ones(align_mask + 1) == 1);
-  intptr ptr = atomic_fetch_add(&arena->next, intptr(size) + align_low_mask);
+  iptr ptr = atomic_fetch_add(&arena->next, iptr(size) + align_low_mask);
   ptr = align_up(ptr, align_low_mask + 1);
-  assert(ptr + intptr(size) <= arena->end);
+  assert(ptr + iptr(size) <= arena->end);
   memset((byte *)ptr, 0, size);
   return ptr;
 }
-static void arena_reset(ArenaAllocator *arena, intptr next) {
+static void arena_reset(ArenaAllocator *arena, iptr next) {
   arena->next = next;
   assert(atomic_load(&arena->next) == next); // assert single-threaded
 }

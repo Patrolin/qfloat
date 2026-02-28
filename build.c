@@ -7,6 +7,9 @@
 #pragma pop_macro("SINGLE_CORE")
 
 // paths
+#define FOO "src/foo.c"
+#define FOO_EXE "dist/foo.exe"
+
 #define GEN_FLOAT_TABLES      "src/gen_float_tables.c"
 #define GEN_FLOAT_TABLES_EXE  "gen_float_tables.exe"
 #define GEN_FLOAT_TABLES_DEST "generated/float_tables.h"
@@ -20,10 +23,12 @@
 void gen_float_tables();
 void build_lib_charconv();
 void run_tests();
+void run_foo();
 void main_singlecore() {
-  gen_float_tables();
-  build_lib_charconv();
-  run_tests();
+  run_foo();
+  //gen_float_tables();
+  //build_lib_charconv();
+  //run_tests();
 }
 
 void set_c99(BuildArgs *args) {
@@ -47,6 +52,14 @@ void set_c99(BuildArgs *args) {
 #if DEBUG
   arg_alloc(args, "-DDEBUG");
 #endif
+}
+void run_foo() {
+  BuildArgs args = {};
+  arg_alloc(&args, FOO);
+  arg_alloc2(&args, "-o", FOO_EXE);
+  set_c99(&args);
+  run_process("clang", &args);
+  run_process("./" FOO_EXE, 0);
 }
 void gen_float_tables() {
   BuildArgs args = {};

@@ -9,7 +9,7 @@
 foreign void ExitProcess(CUINT exit_code);
 #elif OS_LINUX
 noreturn_ exit_group(CINT return_code) {
-  syscall1(SYS_exit_group, (uintptr)return_code);
+  syscall1(SYS_exit_group, (uptr)return_code);
 }
 #endif
 
@@ -75,7 +75,7 @@ rawptr GetProcAddress(ModuleHandle module, cstring proc_name);
 
 STRUCT(BuildArgs) {
   string *start;
-  Size count;
+  usize count;
 };
 #define arg_alloc(args, arg) arg_alloc_impl(args, string(arg))
 #define arg_alloc2(args, arg1, arg2)  \
@@ -83,22 +83,22 @@ STRUCT(BuildArgs) {
   arg_alloc_impl(args, string(arg2))
 static void arg_alloc_impl(BuildArgs *restrict args, string arg) {
   if (expect_far(args->start == 0)) {
-    intptr start = align_up(global_arena.next, alignof(string));
+    iptr start = align_up(global_arena.next, alignof(string));
     args->start = (string *)start;
     global_arena.next = start;
   }
   string *ptr = (string *)atomic_fetch_add(&global_arena.next, sizeof(string));
   *ptr = arg;
   // assert(!out_of_memory && single_threaded)
-  assert(intptr(ptr) + intptr(sizeof(string)) < global_arena.end && ptr == &args->start[args->count]);
+  assert(iptr(ptr) + iptr(sizeof(string)) < global_arena.end && ptr == &args->start[args->count]);
   args->count += 1;
 }
 #if BUILD_SYSTEM
 /* NOTE: we need to have the alignment at compile time, so the optimizer can make better decisions */
-uintptr _get_cache_alignment() {
+uptr _get_cache_alignment() {
   #if OS_WINDOWS
   // TODO: `GetLogicalProcessorInformationEx().Buffer[i].LineSize`
-  uintptr cache_line_size = 0;
+  uptr cache_line_size = 0;
   #elif OS_LINUX
   ASSERT(false); // TODO: `max(grep cache_alignment /proc/cpuinfo)`
   #else
@@ -116,7 +116,7 @@ static void run_process_impl(readonly string app, readonly BuildArgs *args) {
   memcpy(command, app.ptr, app.size);
   byte *next = command + app.size;
   if (expect_near(args != 0)) {
-    for (intptr i = 0; i < args->count; i++) {
+    for (iptr i = 0; i < args->count; i++) {
       string str = args->start[i];
       *(next++) = ' ';
       memcpy(next, str.ptr, str.size);
@@ -124,7 +124,7 @@ static void run_process_impl(readonly string app, readonly BuildArgs *args) {
     }
   }
   (*next) = '\n';
-  string command_str = (string){command, (Size)(next - command + 1)};
+  string command_str = (string){command, usize(next - command + 1)};
   (*next) = '\0';
   // start new process
   STARTUPINFOA startup_info = {
@@ -151,5 +151,5 @@ static void run_process_impl(readonly string app, readonly BuildArgs *args) {
   ASSERT(false);
 #endif
   // assert single-threaded
-  assert(atomic_compare_exchange(&global_arena.next, (intptr *)&command, (intptr)command));
+  assert(atomic_compare_exchange(&global_arena.next, (iptr *)&command, (iptr)command));
 }

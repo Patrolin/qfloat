@@ -5,8 +5,9 @@
 /* IWYU pragma: end_exports */
 
 // Size
+#define nil                    ((void *)0)
 #define ASSERT(condition)      _Static_assert((condition), #condition)
-#define ASSERT_POWER_OF_TWO(a) ASSERT(count_ones(uintptr, a) == 1)
+#define ASSERT_POWER_OF_TWO(a) ASSERT(count_ones(uptr, a) == 1)
 #define DISTINCT(type, name) \
   typedef type name
 #define OPAQUE(name) typedef struct name name
@@ -20,35 +21,40 @@
 
 typedef void *rawptr;
 #define rawptr(x) ((rawptr)(x))
-typedef uintptr_t uintptr;
-#define uintptr(x) ((uintptr)(x))
-typedef char byte;
-#define byte(x) ((byte)(x))
-ASSERT(sizeof(byte) == 1);
-typedef enum : uintptr {
+typedef uintptr_t uptr;
+#define uptr(x) ((uptr)(x))
+typedef uintptr_t usize;
+#define usize(x) ((usize)(x))
+enum : usize {
   Byte = 1,
   KibiByte = 1024 * Byte,
   MebiByte = 1024 * KibiByte,
   GibiByte = 1024 * MebiByte,
-} Size;
-#define Size(x) ((Size)(x))
+};
+typedef char byte;
+#define byte(x) ((byte)(x))
+ASSERT(sizeof(byte) == 1);
 
-#define min(a, b)   ((a) < (b) ? (a) : (b))
-#define max(a, b)   ((a) > (b) ? (a) : (b))
-#define MIN(t)      CONCAT(MIN_, t)
-#define MAX(t)      CONCAT(MAX_, t)
-#define MIN_uintptr uintptr(0)
-#define MAX_uintptr uintptr(-1)
-#define MIN_byte    byte(0)
-#define MAX_byte    byte(-1)
-#define MIN_Size    Size(0)
-#define MAX_Size    Size(-1)
+#define min(a, b) ((a) < (b) ? (a) : (b))
+#define max(a, b) ((a) > (b) ? (a) : (b))
+#define MIN(t)    CONCAT(MIN_, t)
+#define MAX(t)    CONCAT(MAX_, t)
+#define MIN_usize  usize(0)
+#define MAX_usize  usize(-1)
+#define MIN_uptr  uptr(0)
+#define MAX_uptr  uptr(-1)
+#define MIN_byte  byte(0)
+#define MAX_byte  byte(-1)
 
-typedef intptr_t intptr;
-#define intptr(x) ((intptr)(x))
+typedef intptr_t iptr;
+#define iptr(x) ((iptr)(x))
+typedef intptr_t isize;
+#define isize(x) ((isize)(x))
 
-#define MAX_intptr intptr(MAX_uintptr >> 1)
-#define MIN_intptr (~MAX_intptr)
+#define MAX_iptr iptr(MAX_uptr >> 1)
+#define MIN_iptr (MAX_iptr + 1)
+#define MAX_isize iptr(MAX_usize >> 1)
+#define MIN_isize (MAX_isize + 1)
 
 // OS_xxx
 #define OS_WINDOWS 0
@@ -188,23 +194,23 @@ ASSERT(OS_HUGE_PAGE_SIZE == 2 * MebiByte);
 // utf8 strings
 STRUCT(Bytes) {
   byte *ptr;
-  Size size;
+  usize size;
 };
 /* NOTE: don't typedef, so that readonly cstring works correctly */
 #define cstring  char *
 #define rcstring readonly char *
 STRUCT(string) {
   readonly byte *ptr;
-  Size size;
+  usize size;
 };
 /* NOTE: we take the pointer of the cstring directly to avoid a memcpy() */
 #define string(rcstr)        ((string){rcstr, sizeof(rcstr) - 1})
-#define str_slice(str, i, j) ((string){&str.ptr[i], j < i ? 0 : Size(j) - Size(i)})
+#define str_slice(str, i, j) ((string){&str.ptr[i], j < i ? 0 : usize(j) - usize(i)})
 bool str_equals(string a, string b) {
   if (expect_far(a.size != b.size)) {
     return false;
   }
-  for (intptr i = 0; i < a.size; i++) {
+  for (iptr i = 0; i < a.size; i++) {
     if (expect_far(a.ptr[i] != b.ptr[i])) {
       return false;
     }
@@ -214,15 +220,15 @@ bool str_equals(string a, string b) {
 
 // assert
 forward_declare noreturn_ abort();
-forward_declare void fprint(uintptr file, string str);
+forward_declare void fprint(uptr file, string str);
 #if OS_WINDOWS
-typedef enum : uintptr {
+typedef enum : uptr {
   STDIN = -10,
   STDOUT = -11,
   STDERR = -12,
 } ConsoleHandleEnum;
 #elif OS_LINUX
-typedef enum : uintptr {
+typedef enum : uptr {
   STDIN = 0,
   STDOUT = 1,
   STDERR = 2,
@@ -243,14 +249,14 @@ typedef enum : uintptr {
 #define remainder(a, b) ((a) - __builtin_trunc((a) / (b)) * b)
 #define modulo(a, b)    ((a) - __builtin_floor((a) / (b)) * b)
 #if NOLIBC
-extern void *memcpy(void *dest, readonly void *src, Size size) {
+extern void *memcpy(void *dest, readonly void *src, usize size) {
   void *dest_end = dest + size;
   while (dest < dest_end) {
     *(byte *)(dest++) = *(byte *)(src++);
   }
   return dest;
 }
-extern void *memset(void *ptr, int x, Size size) {
+extern void *memset(void *ptr, int x, usize size) {
   assert(x <= 255);
   byte x_byte = (byte)x;
   void *ptr_end = ptr + size;
@@ -339,7 +345,7 @@ ASSERT(sizeof(f16) == 2);
 #define asm                    __asm__
 #define typeof(x)              __typeof__(x)
 #define sizeof_bits(x)         (sizeof(x) * 8)
-#define countof(x)             (intptr(sizeof(x)) / intptr(sizeof(x[0])))
+#define countof(x)             (iptr(sizeof(x)) / iptr(sizeof(x[0])))
 #define alignof(x)             __alignof__(x)
 #define alignof_bits(x)        (alignof(x) * 8)
 #define offsetof(t, key)       __builtin_offsetof(t, key)
