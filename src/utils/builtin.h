@@ -4,9 +4,21 @@
 #include <stdint.h>
 /* IWYU pragma: end_exports */
 
-// Size
-#define nil                    ((void *)0)
-#define ASSERT(condition)      _Static_assert((condition), #condition)
+// utils
+#define OVERLOAD1(a1, ...)                                       a1
+#define OVERLOAD2(a1, a2, ...)                                   a2
+#define OVERLOAD3(a1, a2, a3, ...)                               a3
+#define OVERLOAD4(a1, a2, a3, a4, ...)                           a4
+#define OVERLOAD5(a1, a2, a3, a4, a5, ...)                       a5
+#define OVERLOAD6(a1, a2, a3, a4, a5, a6, ...)                   a6
+#define OVERLOAD7(a1, a2, a3, a4, a5, a6, a7, ...)               a7
+#define OVERLOAD8(a1, a2, a3, a4, a5, a6, a7, a8, ...)           a8
+#define OVERLOAD9(a1, a2, a3, a4, a5, a6, a7, a8, a9, ...)       a9
+#define OVERLOAD10(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, ...) a10
+
+#define ASSERT1(condition) _Static_assert((condition), #condition)
+#define ASSERT2(condition, message) _Static_assert((condition), message)
+#define ASSERT(...)      OVERLOAD3(__VA_ARGS__, ASSERT2, ASSERT1)(__VA_ARGS__)
 #define ASSERT_POWER_OF_TWO(a) ASSERT(count_ones(uptr, a) == 1)
 #define DISTINCT(type, name) \
   typedef type name
@@ -19,6 +31,8 @@
   typedef struct name name;      \
   struct alignto(alignment) name
 
+// uptr, usize
+#define nil ((void *)0)
 typedef void *rawptr;
 #define rawptr(x) ((rawptr)(x))
 typedef uintptr_t uptr;
@@ -39,8 +53,8 @@ ASSERT(sizeof(byte) == 1);
 #define max(a, b) ((a) > (b) ? (a) : (b))
 #define MIN(t)    CONCAT(MIN_, t)
 #define MAX(t)    CONCAT(MAX_, t)
-#define MIN_usize  usize(0)
-#define MAX_usize  usize(-1)
+#define MIN_usize usize(0)
+#define MAX_usize usize(-1)
 #define MIN_uptr  uptr(0)
 #define MAX_uptr  uptr(-1)
 #define MIN_byte  byte(0)
@@ -51,8 +65,8 @@ typedef intptr_t iptr;
 typedef intptr_t isize;
 #define isize(x) ((isize)(x))
 
-#define MAX_iptr iptr(MAX_uptr >> 1)
-#define MIN_iptr (MAX_iptr + 1)
+#define MAX_iptr  iptr(MAX_uptr >> 1)
+#define MIN_iptr  (MAX_iptr + 1)
 #define MAX_isize iptr(MAX_usize >> 1)
 #define MIN_isize (MAX_isize + 1)
 
@@ -137,10 +151,9 @@ ASSERT(OS_HUGE_PAGE_SIZE == 2 * MebiByte);
 #define IF_0(t, f)          f
 #define IF(condition, t, f) CONCAT(IF_, condition)(t, f)
 
-#define PROBE()           1, 1
-#define SECOND(a, b, ...) b
+#define PROBE() 1, 1
 /* NOTE: SECOND() is also acting like EXPAND() here... */
-#define IS_PROBE(...)    SECOND(__VA_ARGS__, 0)
+#define IS_PROBE(...)    OVERLOAD2(__VA_ARGS__, 0)
 #define IS_STRING_string PROBE()
 #define IS_STRING(x)     IS_PROBE(CONCAT(IS_STRING_, x))
 

@@ -131,7 +131,7 @@ static void run_process_impl(readonly string app, readonly BuildArgs *args) {
     .cb = sizeof(STARTUPINFOA),
   };
   PROCESS_INFORMATION process_info;
-  println(string, command_str);
+  println_string(command_str);
   bool ok = CreateProcessA(0, command, 0, 0, false, 0, 0, 0, &startup_info, &process_info);
   if (!ok) {
     DWORD err = GetLastError();
