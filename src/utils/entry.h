@@ -100,7 +100,7 @@ void _init_threads() {
 #endif
 
 noreturn_ _init_process() {
-#if OS_WINDOWS && NOLIBC
+#if NOLIBC && OS_WINDOWS
   asm volatile("" ::"X"(_fltused));
 #endif
   _init_console();

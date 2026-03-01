@@ -19,7 +19,7 @@
 
 #define ASSERT1(condition)          _Static_assert((condition), #condition)
 #define ASSERT2(condition, message) _Static_assert((condition), message)
-#define ASSERT(...)                 OVERLOAD3(__VA_ARGS__, ASSERT2, ASSERT1)(__VA_ARGS__)
+#define ASSERT(...)                 OVERLOAD3(__VA_ARGS__ __VA_OPT__(, ) ASSERT2, ASSERT1)(__VA_ARGS__)
 #define ASSERT_POWER_OF_TWO(a)      ASSERT(count_ones(uptr, a) == 1)
 #define DISTINCT(type, name) \
   typedef type name
@@ -127,15 +127,15 @@ ASSERT(OS_HUGE_PAGE_SIZE == 2 * MebiByte);
 /* NOTE: macs can have bigger cache line sizes */
 #define ARCH_MAX_CACHE_LINE_SIZE 128
 
-#if __AVX512BF16__ || __ARM_FEATURE_BF16 || __has_extension(bfloat16_type)
-  #define ARCH_HAS_NATIVE_BF16 1
-#else
-  #define ARCH_HAS_NATIVE_BF16 0
-#endif
 #if __HAVE_FLOAT16__ || __HAVE_FP16__ || __has_extension(c_float16)
   #define ARCH_HAS_NATIVE_F16 1
 #else
   #define ARCH_HAS_NATIVE_F16 0
+#endif
+#if __AVX512BF16__ || __ARM_FEATURE_BF16 || __has_extension(bfloat16_type)
+  #define ARCH_HAS_NATIVE_BF16 1
+#else
+  #define ARCH_HAS_NATIVE_BF16 0
 #endif
 
 // preprocessor helpers
@@ -244,14 +244,10 @@ typedef enum : uptr {
     abort();                           \
   }                                    \
 })
-#define assert(condition) assert2(condition, string(" " __FILE__ ":" STR(__LINE__) " assert(" #condition ")\n"))
+#define assert1(condition) assert2(condition, string(" " __FILE__ ":" STR(__LINE__) " assert(" #condition ")\n"))
+#define assert(...)        OVERLOAD3(__VA_ARGS__ __VA_OPT__(, ) assert2, assert1)(__VA_ARGS__)
 
 // CRT
-#define NaN     __builtin_nan("")
-#define absg(x) ((x) < 0) ? (-(x)) : (x)
-/* NOTE: libc's `fmod()` returns the `remainder()`... */
-#define remainder(a, b) ((a) - __builtin_trunc((a) / (b)) * b)
-#define modulo(a, b)    ((a) - __builtin_floor((a) / (b)) * b)
 #if NOLIBC
 extern void *memcpy(void *dest, readonly void *src, usize size) {
   void *dest_end = dest + size;
@@ -287,16 +283,19 @@ typedef uint16_t u16;
 typedef uint8_t u8;
 #define u8(x) ((u8)(x))
 
-#define MIN_u64 u64(0)
-#define MAX_u64 u64(-1)
-#define MIN_u32 u32(0)
-#define MAX_u32 u32(-1)
-#define MIN_u16 u16(0)
-#define MAX_u16 u16(-1)
-#define MIN_u8  u8(0)
-#define MAX_u8  u8(-1)
+#define MIN_u128 u128(0)
+#define MAX_u128 u128(-1)
+#define MIN_u64  u64(0)
+#define MAX_u64  u64(-1)
+#define MIN_u32  u32(0)
+#define MAX_u32  u32(-1)
+#define MIN_u16  u16(0)
+#define MAX_u16  u16(-1)
+#define MIN_u8   u8(0)
+#define MAX_u8   u8(-1)
 
 typedef __int128 i128;
+#define i128(x) ((i128)(x))
 typedef int64_t i64;
 #define i64(x) ((i64)(x))
 typedef int32_t i32;
@@ -335,21 +334,21 @@ ASSERT(sizeof(f64) == 8);
 typedef float f32;
 #define f32(x) ((f32)(x))
 ASSERT(sizeof(f32) == 4);
-/* NOTE: If there isn't native support, f16 is implemented by converting back and forth between f32... */
-#if ARCH_HAS_NATIVE_BF16
-typedef __bf16 bf16;
-ASSERT(sizeof(bf16) == 2);
-#endif
+/* NOTE: If there isn't native support, f16 is implemented by repeatedly converting back and forth between f32... */
 #if ARCH_HAS_NATIVE_F16
 typedef _Float16 f16;
 ASSERT(sizeof(f16) == 2);
+#endif
+#if ARCH_HAS_NATIVE_BF16
+typedef __bf16 bf16;
+ASSERT(sizeof(bf16) == 2);
 #endif
 
 // builtins - https://clang.llvm.org/docs/LanguageExtensions.html#builtin-functions
 #define asm                    __asm__
 #define typeof(x)              __typeof__(x)
 #define sizeof_bits(x)         (sizeof(x) * 8)
-#define countof(x)             (iptr(sizeof(x)) / iptr(sizeof(x[0])))
+#define countof(x)             (isize(sizeof(x)) / isize(sizeof((x)[0])))
 #define alignof(x)             __alignof__(x)
 #define alignof_bits(x)        (alignof(x) * 8)
 #define offsetof(t, key)       __builtin_offsetof(t, key)
@@ -381,7 +380,7 @@ ASSERT(sizeof(f16) == 2);
   ASSERT(sizeof(t2) < sizeof(t1)); \
   (t2)(min(t1, v1, (t1)MAX(t2)));  \
 })
-/* NOTE: defer is a zero cost abstraction with -O1 or greater on any compiler */
+/* NOTE: `defer` and `with` are zero cost abstractions with -O1 or greater on any compiler */
 #define defer(defer_end)           for (bool defer_done__ = 0; !defer_done__; (defer_end), defer_done__ = 1)
 #define with(with_start, with_end) with_impl(__COUNTER__, with_start, with_end)
 #define with_impl(C, with_start, with_end) \
@@ -391,7 +390,7 @@ ASSERT(sizeof(f16) == 2);
 // atomics: https://gcc.gnu.org/onlinedocs/gcc/_005f_005fatomic-Builtins.html
 #define volatile_store(ptr, value) __atomic_store_n(ptr, value, __ATOMIC_RELAXED)
 #define volatile_load(ptr)         __atomic_load_n(ptr, __ATOMIC_RELAXED)
-// #define compiler_fence() __atomic_signal_fence(__ATOMIC_SEQ_CST)
+#define optimizer_fence(value)     asm volatile("" : "+X"(value))
 // #define memory_write_fence() __atomic_thread_fence(__ATOMIC_RELEASE)
 // #define memory_read_fence()  __atomic_thread_fence(__ATOMIC_ACQUIRE)
 #define memory_fence() __atomic_thread_fence(__ATOMIC_SEQ_CST)
@@ -413,15 +412,15 @@ ASSERT(sizeof(f16) == 2);
 #define atomic_xor_fetch(ptr, value)                       __atomic_xor_fetch((ptr), (value), __ATOMIC_SEQ_CST)
 #define atomic_fetch_nand(ptr, value)                      __atomic_fetch_nand((ptr), (value), __ATOMIC_SEQ_CST)
 #define atomic_nand_fetch(ptr, value)                      __atomic_nand_fetch((ptr), (value), __ATOMIC_SEQ_CST)
-// ASSERT(__atomic_always_lock_free(sizeof(u128), 0)); /* NOTE: seemingly a bug in clang - should return true, but doesn't */
+// ASSERT(__atomic_always_lock_free(sizeof(u128), 0)); /* NOTE: effectively a bug in clang - all architectures now support it, but compilers (pretend that they) don't... */
 ASSERT(__atomic_always_lock_free(sizeof(u64), 0));
 ASSERT(__atomic_always_lock_free(sizeof(u32), 0));
 ASSERT(__atomic_always_lock_free(sizeof(u16), 0));
 ASSERT(__atomic_always_lock_free(sizeof(u8), 0));
 
 // bits: https://gcc.gnu.org/onlinedocs/gcc/Bit-Operation-Builtins.html
-#define index_first_one_floor(t, x) ((sizeof_bits(t) - 1) - (t)__builtin_clzg((t)(x)))
-#define index_first_one_ceil(t, x)  index_first_one_floor((x - 1) << 1);
+#define index_first_one_floor(t, x) (t)((sizeof_bits(t) - 1) - (t)__builtin_clzg((t)(x)))
+#define index_first_one_ceil(t, x)  (t)(index_first_one_floor(((t)(x) - 1) << 1));
 #define count_ones(t, x)            (t)(__builtin_popcountg((t)(x)))
 #define count_zeros(t, x)           (t)(__builtin_popcountg(~(t)(x)))
 #define count_parity(t, x)          (count_ones(t, x) & 1)
