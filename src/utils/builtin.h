@@ -148,16 +148,6 @@ ASSERT(OS_HUGE_PAGE_SIZE == 2 * MebiByte);
   so we need macro variables to all have different names... */
 #define VAR(name, counter) CONCAT(name##__, counter)
 
-#define IF_1(t, f)          t
-#define IF_0(t, f)          f
-#define IF(condition, t, f) CONCAT(IF_, condition)(t, f)
-
-#define PROBE() 1, 1
-/* NOTE: SECOND() is also acting like EXPAND() here... */
-#define IS_PROBE(...)    OVERLOAD2(__VA_ARGS__, 0)
-#define IS_STRING_string PROBE()
-#define IS_STRING(x)     IS_PROBE(CONCAT(IS_STRING_, x))
-
 // type keywords
 #define global   static
 #define readonly const
