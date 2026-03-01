@@ -200,11 +200,11 @@ STRUCT(Bytes) {
   byte *ptr;
   usize size;
 };
-/* NOTE: don't typedef, so that readonly cstring works correctly */
+/* NOTE: don't typedef, so that `readonly cstring` works correctly */
 #define cstring  char *
 #define rcstring readonly char *
 STRUCT(string) {
-  readonly byte *ptr;
+  rcstring ptr;
   usize size;
 };
 /* NOTE: we take the pointer of the cstring directly to avoid a memcpy() */
