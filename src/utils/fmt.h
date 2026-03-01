@@ -38,7 +38,7 @@ void fprint(FileHandle file, string str) {
 #define sprint_size_string(value) (value.size)
 usize sprint_string(string str, byte *buffer_end) {
   byte *buffer = buffer_end - str.size;
-  for (iptr i = 0; i < str.size; i++) {
+  for (usize i = 0; i < str.size; i++) {
     buffer[i] = str.ptr[i];
   }
   return str.size;

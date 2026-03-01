@@ -119,7 +119,7 @@ uptr _free_list_index_floor(usize size) {
 }
 iptr _free_list_get(GeneralAllocator *allocator, usize size) {
   // TODO: this is too aggressive - do the proper algorithm
-  uptr free_list_index = _free_list_index_floor((size - 1) << 1);
+  //uptr free_list_index = _free_list_index_floor((size - 1) << 1);
   //..get item from first valid free_list
   return 0;
 }

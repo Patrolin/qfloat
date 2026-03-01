@@ -116,7 +116,7 @@ static void run_process_impl(readonly string app, readonly BuildArgs *args) {
   memcpy(command, app.ptr, app.size);
   byte *next = command + app.size;
   if (expect_near(args != 0)) {
-    for (iptr i = 0; i < args->count; i++) {
+    for (usize i = 0; i < args->count; i++) {
       string str = args->start[i];
       *(next++) = ' ';
       memcpy(next, str.ptr, str.size);

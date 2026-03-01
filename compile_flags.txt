@@ -6,5 +6,8 @@
 -Werror
 -Wconversion
 -Wsign-conversion
+-Wsign-compare
 -Wnullable-to-nonnull-conversion
+-Wuninitialized
+-Wconditional-uninitialized
 -DSTB_SPRINTF_IMPLEMENTATION

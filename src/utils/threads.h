@@ -206,9 +206,7 @@ void barrier(Thread t) {
 /* return true on the first thread that gets here, and false on the rest */
 bool single_core(Thread t) {
   u32 threads_start = global_threads.thread_infos[t].threads_start;
-  u32 threads_end = global_threads.thread_infos[t].threads_end;
   ThreadInfo *shared_data = &global_threads.thread_infos[threads_start];
-  u32 thread_count = threads_end - threads_start;
 
   bool is_first = atomic_fetch_add(&shared_data->is_first_counter, 1) == 0;
   if (expect_near(is_first)) {

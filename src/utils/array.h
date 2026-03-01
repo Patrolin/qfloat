@@ -21,7 +21,7 @@ void array_grow(void **arr, usize item_size, usize item_align) {
     *arr = header + 1;
   } else {
     ArrayHeader *header = array_header(arr);
-    void *data = *arr;
+    //void *data = *arr;
     if (header->count >= header->capacity) {
       assert(false); // TODO: move the array
     }

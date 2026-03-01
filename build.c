@@ -7,7 +7,7 @@
 #pragma pop_macro("SINGLE_CORE")
 
 // paths
-#define FOO "src/foo.c"
+#define FOO     "src/foo.c"
 #define FOO_EXE "dist/foo.exe"
 
 #define GEN_FLOAT_TABLES      "src/gen_float_tables.c"
@@ -26,9 +26,9 @@ void run_tests();
 void run_foo();
 void main_singlecore() {
   run_foo();
-  //gen_float_tables();
-  //build_lib_charconv();
-  //run_tests();
+  // gen_float_tables();
+  // build_lib_charconv();
+  // run_tests();
 }
 
 void set_c99(BuildArgs *args) {
@@ -40,7 +40,10 @@ void set_c99(BuildArgs *args) {
   arg_alloc(args, "-Werror");
   arg_alloc(args, "-Wconversion");
   arg_alloc(args, "-Wsign-conversion");
+  arg_alloc(args, "-Wsign-compare");
   arg_alloc(args, "-Wnullable-to-nonnull-conversion");
+  arg_alloc(args, "-Wuninitialized");
+  arg_alloc(args, "-Wconditional-uninitialized");
 #if NOLIBC
   arg_alloc(args, "-nostdlib");
   arg_alloc(args, "-mno-stack-arg-probe");
