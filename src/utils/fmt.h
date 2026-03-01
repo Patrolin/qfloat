@@ -16,9 +16,7 @@ void fprint(FileHandle file, string str) {
 #else
   abort();
 #endif
-  if (expect_far(bytes_written != str.size)) {
-    abort();
-  }
+  if (expect_far(bytes_written != str.size)) abort();
 }
 
 // sprint_size(), sprint1()
