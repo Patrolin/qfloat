@@ -5,21 +5,22 @@
 /* IWYU pragma: end_exports */
 
 // utils
-#define OVERLOAD1(a1, ...)                                       a1
-#define OVERLOAD2(a1, a2, ...)                                   a2
-#define OVERLOAD3(a1, a2, a3, ...)                               a3
-#define OVERLOAD4(a1, a2, a3, a4, ...)                           a4
-#define OVERLOAD5(a1, a2, a3, a4, a5, ...)                       a5
-#define OVERLOAD6(a1, a2, a3, a4, a5, a6, ...)                   a6
-#define OVERLOAD7(a1, a2, a3, a4, a5, a6, a7, ...)               a7
-#define OVERLOAD8(a1, a2, a3, a4, a5, a6, a7, a8, ...)           a8
-#define OVERLOAD9(a1, a2, a3, a4, a5, a6, a7, a8, a9, ...)       a9
-#define OVERLOAD10(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, ...) a10
+#define OVERLOAD1(a1, ...)                                            a1
+#define OVERLOAD2(a1, a2, ...)                                        a2
+#define OVERLOAD3(a1, a2, a3, ...)                                    a3
+#define OVERLOAD4(a1, a2, a3, a4, ...)                                a4
+#define OVERLOAD5(a1, a2, a3, a4, a5, ...)                            a5
+#define OVERLOAD6(a1, a2, a3, a4, a5, a6, ...)                        a6
+#define OVERLOAD7(a1, a2, a3, a4, a5, a6, a7, ...)                    a7
+#define OVERLOAD8(a1, a2, a3, a4, a5, a6, a7, a8, ...)                a8
+#define OVERLOAD9(a1, a2, a3, a4, a5, a6, a7, a8, a9, ...)            a9
+#define OVERLOAD10(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, ...)      a10
+#define OVERLOAD11(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, ...) a11
 
-#define ASSERT1(condition) _Static_assert((condition), #condition)
+#define ASSERT1(condition)          _Static_assert((condition), #condition)
 #define ASSERT2(condition, message) _Static_assert((condition), message)
-#define ASSERT(...)      OVERLOAD3(__VA_ARGS__, ASSERT2, ASSERT1)(__VA_ARGS__)
-#define ASSERT_POWER_OF_TWO(a) ASSERT(count_ones(uptr, a) == 1)
+#define ASSERT(...)                 OVERLOAD3(__VA_ARGS__, ASSERT2, ASSERT1)(__VA_ARGS__)
+#define ASSERT_POWER_OF_TWO(a)      ASSERT(count_ones(uptr, a) == 1)
 #define DISTINCT(type, name) \
   typedef type name
 #define OPAQUE(name) typedef struct name name

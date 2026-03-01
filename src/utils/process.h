@@ -135,7 +135,7 @@ static void run_process_impl(readonly string app, readonly BuildArgs *args) {
   bool ok = CreateProcessA(0, command, 0, 0, false, 0, 0, 0, &startup_info, &process_info);
   if (!ok) {
     DWORD err = GetLastError();
-    printfln2(string("err: %, ok: %"), u32, err, bool, ok);
+    printfln("err: %, ok: %", u32, err, bool, ok);
   }
   assert(ok);
   WaitResult wait_result = WaitForSingleObject(process_info.hProcess, TIME_INFINITE);
