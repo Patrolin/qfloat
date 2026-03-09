@@ -139,7 +139,7 @@ usize sprint_uptr(uptr value, byte *buffer_end) {
 }
   #define sprint_size_iptr(value) sprint_size_u64(value)
 usize sprint_iptr(iptr value, byte *buffer_end) {
-  return sprint_u64(u64(value), buffer_end);
+  return sprint_i64(i64(value), buffer_end);
 }
 #elif ARCH_IS_32_BIT
   #define sprint_size_uptr(value) sprint_size_u32(value)
@@ -319,7 +319,6 @@ usize sprint_isize(isize value, byte *buffer_end) {
 #define println(rcstr)      print_string(string(rcstr "\n"))
 
 // printf(), printfln()
-#define INVALID_PRINTF(...) ASSERT(false, "Invalid argument count for printf()")
 #define printf_impl(format, ...)                                       \
   do {                                                                 \
     usize printf_max_size = sprint_size(string, format, __VA_ARGS__);  \
