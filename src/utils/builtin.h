@@ -211,9 +211,12 @@ STRUCT(string) {
 #define string(rcstr)        ((string){rcstr, sizeof(rcstr) - 1})
 #define str_slice(str, i, j) ((string){&str.ptr[i], j < i ? 0 : usize(j) - usize(i)})
 bool str_equals(string a, string b) {
-  if (expect_far(a.size != b.size)) return false;
-  for (usize i = 0; i < a.size; i++) {
-    if (expect_far(a.ptr[i] != b.ptr[i])) return false;
+  if (a.size != b.size) return false;
+  usize i = 0;
+  assume(a.size > 0); /* NOTE: prevent optimizing for `a.size == 0` - is this guaranteed to preserve the while loop? */
+  while (i < a.size) {
+    if (a.ptr[i] != b.ptr[i]) return false;
+    i++;
   }
   return true;
 }

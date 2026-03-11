@@ -4,10 +4,14 @@
 #include "mem.h"
 
 // params
-#define DEFAULT_ARRAY_SIZE  4
-#define hash(x)             noise_u64(usize(x))
+#define ARRAY_DEFAULT_SIZE            4
+#define ARRAY_ALLOC_SIZE(size, align) arena_alloc_size(&global_arena, size, align)
+#define ARRAY_FREE(ptr)
+#define MAP_HASH(x)         noise_u64(usize(x))
 #define MAP_KEY_TYPE        isize
 #define MAP_FILL_PERCENTAGE 75
+/* TODO: use a gp allocator */
+/* TODO: pop and zero */
 
 // array
 #define array(T)          T *
@@ -19,21 +23,30 @@ STRUCT(ArrayHeader) {
 ASSERT(sizeof(ArrayHeader) >= __BIGGEST_ALIGNMENT__);
 ASSERT(sizeof(ArrayHeader) % __BIGGEST_ALIGNMENT__ == 0);
 
-#define len(arr)               (*(arr) == nil ? 0 : array_header(arr)->count)
-#define array_push(arr, value) (_array_grow((void **)(arr), sizeof(**(arr)), alignof(**(arr))), ((*(arr))[(array_header(arr))->count++] = value))
+#define len(arr)                      (*(arr) == nil ? 0 : array_header(arr)->count)
+#define array_push(arr, value)        (_array_grow((void **)(arr), sizeof(**(arr)), alignof(**(arr))), ((*(arr))[(array_header(arr))->count++] = value))
+#define _array_size(count, item_size) sizeof(ArrayHeader) + usize(item_size) * usize(count)
+#define _array_alloc(arr, cap, item_size, item_align)                                   \
+  do {                                                                                  \
+    usize required_size = _array_size(cap, item_size);                                  \
+    ArrayHeader *header = (ArrayHeader *)ARRAY_ALLOC_SIZE(required_size, (item_align)); \
+    header->capacity = (cap);                                                           \
+    header->count = 0;                                                                  \
+    *(arr) = header + 1;                                                                \
+  } while (0);
 void _array_grow(void **arr, usize item_size, usize item_align) {
   assert(item_align <= __BIGGEST_ALIGNMENT__);
-  if (*arr == nil) {
-    usize required_size = sizeof(ArrayHeader) + item_size * DEFAULT_ARRAY_SIZE;
-    ArrayHeader *header = (ArrayHeader *)arena_alloc_size(&global_arena, required_size, item_align);
-    header->capacity = DEFAULT_ARRAY_SIZE;
-    header->count = 0;
-    *arr = header + 1;
+  void *old_data = *arr;
+  if (old_data == nil) {
+    _array_alloc(arr, ARRAY_DEFAULT_SIZE, item_size, item_align);
   } else {
     ArrayHeader *header = array_header(arr);
-    // void *data = *arr;
+    usize old_size = _array_size(header->count, item_size);
     if (header->count >= header->capacity) {
-      assert(false); // TODO: move the array
+      void *old_header = old_data - sizeof(ArrayHeader);
+      _array_alloc(arr, header->capacity * 2, item_size, item_align);
+      memcpy(old_header, *arr, old_size);
+      ARRAY_FREE(old_header);
     }
   }
 }
@@ -69,7 +82,7 @@ isize _map_find(void **arr, MAP_KEY_TYPE key, usize value_size) {
   if (*arr == nil) return -1;
   usize arr_len = usize(len(arr));
   MapSlot *slots = _map_slots(arr, value_size);
-  usize i = hash(key) % arr_len;
+  usize i = MAP_HASH(key) % arr_len;
   usize probe = i | 1;
   while (1) {
     MapSlot slot = slots[i];
@@ -80,10 +93,10 @@ isize _map_find(void **arr, MAP_KEY_TYPE key, usize value_size) {
 }
 isize _map_grow(void **arr, MAP_KEY_TYPE key, usize value_size, usize value_align) {
   if (*arr == nil) {
-    usize required_size = sizeof(MapHeader) + value_size * DEFAULT_ARRAY_SIZE + (alignof(MapSlot) - 1) + sizeof(MapSlot) * DEFAULT_ARRAY_SIZE;
-    MapHeader *header = (MapHeader *)arena_alloc_size(&global_arena, required_size, value_align);
+    usize required_size = sizeof(MapHeader) + value_size * ARRAY_DEFAULT_SIZE + (alignof(MapSlot) - 1) + sizeof(MapSlot) * ARRAY_DEFAULT_SIZE;
+    MapHeader *header = (MapHeader *)ARRAY_ALLOC_SIZE(required_size, value_align);
     header->filled = 0;
-    header->capacity = DEFAULT_ARRAY_SIZE;
+    header->capacity = ARRAY_DEFAULT_SIZE;
     *arr = header + 1;
   }
   isize i = _map_find(arr, key, value_size);
