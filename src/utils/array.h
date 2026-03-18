@@ -22,38 +22,39 @@ PACKED_STRUCT(ArrayHeader) {
   isize count;
 };
 
-#define len(arr)                                     (*(arr) == nil ? 0 : array_header(arr)->count)
-#define array_push(arr, value)                       (_array_grow((void **)(arr), sizeof(**(arr)), alignof(**(arr))), ((*(arr))[(array_header(arr))->count++] = value))
-#define _array_size(item_size, item_align, capacity) (((item_align) - 1) + sizeof(ArrayHeader) + (item_size) * (capacity))
-void _array_alloc(void **arr, usize item_size, usize item_align, usize capacity) {
-  usize required_size = _array_size(item_size, item_align, capacity);
+#define len(arr)                                          (*(arr) == nil ? 0 : array_header(arr)->count)
+#define array_push(arr, value)                            (_array_grow((void **)(arr), sizeof(**(arr)), alignof(**(arr)) - 1), ((*(arr))[(array_header(arr))->count++] = value))
+#define _array_size(item_size, item_align_mask, capacity) (item_align_mask + sizeof(ArrayHeader) + (item_size) * (capacity))
+void _array_alloc(void **arr, usize item_size, usize item_align_mask, usize capacity) {
+  usize required_size = _array_size(item_size, item_align_mask, capacity);
   uptr ptr = ARRAY_ALLOC_SIZE(required_size, 1);
-  uptr data = align_up(ptr + sizeof(ArrayHeader), item_align);
-  u8 align_offset = (u8)align_up_offset(ptr + sizeof(ArrayHeader), item_align);
+  uptr data = align_up2(ptr + sizeof(ArrayHeader), item_align_mask);
+  u8 align_offset = (u8)align_up_offset2(ptr + sizeof(ArrayHeader), item_align_mask);
   ArrayHeader *header = (ArrayHeader *)(data - sizeof(ArrayHeader));
   header->align_offset = align_offset;
   header->capacity = isize(capacity);
   header->count = 0;
   *(arr) = (rawptr)data;
 }
-void _array_grow(void **arr, usize item_size, usize item_align) {
-  assert(item_align <= __BIGGEST_ALIGNMENT__);
+void _array_grow(void **arr, usize item_size, usize item_align_mask) {
   void *old_data = *arr;
   if (old_data == nil) {
-    _array_alloc(arr, ARRAY_DEFAULT_SIZE, item_size, item_align);
+    _array_alloc(arr, item_size, item_align_mask, ARRAY_DEFAULT_SIZE);
   } else {
     ArrayHeader *header = array_header(arr);
     if (expect_near(header->count < header->capacity)) return;
     void *old_ptr = old_data - sizeof(ArrayHeader);
-    usize old_size = _array_size(item_size, item_align, usize(header->capacity));
-    _array_alloc(arr, item_size, item_align, usize(header->capacity) * 2);
+    usize old_size = _array_size(item_size, item_align_mask, usize(header->capacity));
+    _array_alloc(arr, item_size, item_align_mask, usize(header->capacity) * 2);
     memcpy(old_ptr, *arr, old_size);
     ARRAY_FREE(old_header);
   }
 }
 void array_free(void **arr) {
   if (*arr != nil) {
-    ARRAY_FREE(*arr);
+    ArrayHeader *header = array_header(arr);
+    uptr ptr = uptr(header) - header->align_offset;
+    ARRAY_FREE(ptr);
     *arr = nil;
   }
 }
