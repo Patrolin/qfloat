@@ -6,7 +6,7 @@
 ASSERT_POWER_OF_TWO(RING_BUFFER_SIZE);
 
 STRUCT(RingBuffer) {
-  iptr buffer;
+  isize buffer;
   i32 write_index;
   i32 default_read_index;
 };
@@ -102,11 +102,11 @@ STRUCT(FreeBlockHeader) {
 STRUCT(GeneralAllocator) {
   byte *buffer;
   usize buffer_size;
-  iptr next;
-  iptr end;
+  uptr next;
+  uptr end;
 };
 STRUCT(AllocatorThreadData) {
-  iptr free_lists[FREE_LIST_COUNT];
+  uptr free_lists[FREE_LIST_COUNT];
 };
 global GeneralAllocator global_allocator;
 
@@ -117,9 +117,9 @@ uptr _free_list_index_floor(usize size) {
   usize mantissa = (size >> mantissa_start) & (MEM_MANTISSA_MAX - 1);
   return exponent | mantissa;
 }
-iptr _free_list_get(GeneralAllocator *allocator, usize size) {
+uptr _free_list_get(GeneralAllocator *allocator, usize size) {
   // TODO: this is too aggressive - do the proper algorithm
-  //uptr free_list_index = _free_list_index_floor((size - 1) << 1);
+  // uptr free_list_index = _free_list_index_floor((size - 1) << 1);
   //..get item from first valid free_list
   return 0;
 }
@@ -130,23 +130,23 @@ usize _free_list_size(uptr n) {
   return (mantissa | MEM_MANTISSA_MAX) << (exponent - 1);
 }
 
-#define alloc(t)                       ((t *)alloc_size(allocator, sizeof(t), alignof(t)))
-#define alloc_array(t, count)          ((t *)alloc_size(allocator, sizeof(t) * count, alignof(t)))
-#define alloc_flexible(t1, t2, count)  ((t1 *)alloc_size(allocator, sizeof(t1) + sizeof(t2) * count, alignof(t1)))
-#define alloc_size(size, align) _alloc_impl(&global_allocator, size, max(align, alignof(UsedBlockPrefix)) - 1)
-iptr _alloc_impl(GeneralAllocator *allocator, usize size, usize align_low_mask) {
+#define alloc(t)                      ((t *)alloc_size(allocator, sizeof(t), alignof(t)))
+#define alloc_array(t, count)         ((t *)alloc_size(allocator, sizeof(t) * count, alignof(t)))
+#define alloc_flexible(t1, t2, count) ((t1 *)alloc_size(allocator, sizeof(t1) + sizeof(t2) * count, alignof(t1)))
+#define alloc_size(size, align)       _alloc_impl(&global_allocator, size, max(align, alignof(UsedBlockPrefix)) - 1)
+uptr _alloc_impl(GeneralAllocator *allocator, usize size, usize align_low_mask) {
   if (expect_far(size == 0)) return 0;
   //..if too big, just virtual alloc
-  usize padded_size = max(sizeof(AllocatorBlockCommon) + sizeof(UsedBlockPrefix) + align_low_mask + size, sizeof(FreeBlockHeader));
-  iptr ptr = _free_list_get(allocator, padded_size);
+  uptr padded_size = max(sizeof(AllocatorBlockCommon) + sizeof(UsedBlockPrefix) + align_low_mask + size, sizeof(FreeBlockHeader));
+  uptr ptr = _free_list_get(allocator, padded_size);
   if (ptr == 0) {
-    padded_size = (usize)align_up(iptr(padded_size), alignof(FreeBlockHeader));
-    ptr = atomic_fetch_add(&allocator->next, iptr(padded_size));
-    assert(ptr + iptr(size) <= allocator->end);
+    padded_size = align_up(padded_size, alignof(FreeBlockHeader));
+    ptr = atomic_fetch_add(&allocator->next, padded_size);
+    assert(ptr + size <= allocator->end);
   }
-  iptr align_offset = iptr(align_low_mask + 1) - (ptr & iptr(align_low_mask)); // NOTE: gets optimized into `align_up()`
-  ptr = align_up(ptr, iptr(align_low_mask + 1));
-  *(UsedBlockPrefix *)(ptr - iptr(sizeof(UsedBlockPrefix))) = (UsedBlockPrefix)align_offset;
+  uptr align_offset = (align_low_mask + 1) - (ptr & align_low_mask); // NOTE: gets optimized into `align_up()`
+  ptr = align_up(ptr, align_low_mask + 1);
+  *(UsedBlockPrefix *)(ptr - sizeof(UsedBlockPrefix)) = (UsedBlockPrefix)align_offset;
   memset((byte *)ptr, 0, size);
   return 0;
 }

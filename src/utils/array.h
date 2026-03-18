@@ -11,29 +11,31 @@
 #define MAP_KEY_TYPE        isize
 #define MAP_FILL_PERCENTAGE 75
 /* TODO: use a gp allocator */
-/* TODO: pop and zero */
+/* TODO: array_pop() */
 
 // array
 #define array(T)          T *
 #define array_header(arr) ((ArrayHeader *)(uptr(*(arr)) - sizeof(ArrayHeader)))
-STRUCT(ArrayHeader) {
+PACKED_STRUCT(ArrayHeader) {
+  u8 align_offset;
   isize capacity;
   isize count;
 };
-ASSERT(sizeof(ArrayHeader) >= __BIGGEST_ALIGNMENT__);
-ASSERT(sizeof(ArrayHeader) % __BIGGEST_ALIGNMENT__ == 0);
 
-#define len(arr)                      (*(arr) == nil ? 0 : array_header(arr)->count)
-#define array_push(arr, value)        (_array_grow((void **)(arr), sizeof(**(arr)), alignof(**(arr))), ((*(arr))[(array_header(arr))->count++] = value))
-#define _array_size(count, item_size) sizeof(ArrayHeader) + usize(item_size) * usize(count)
-#define _array_alloc(arr, cap, item_size, item_align)                                   \
-  do {                                                                                  \
-    usize required_size = _array_size(cap, item_size);                                  \
-    ArrayHeader *header = (ArrayHeader *)ARRAY_ALLOC_SIZE(required_size, (item_align)); \
-    header->capacity = (cap);                                                           \
-    header->count = 0;                                                                  \
-    *(arr) = header + 1;                                                                \
-  } while (0);
+#define len(arr)                                     (*(arr) == nil ? 0 : array_header(arr)->count)
+#define array_push(arr, value)                       (_array_grow((void **)(arr), sizeof(**(arr)), alignof(**(arr))), ((*(arr))[(array_header(arr))->count++] = value))
+#define _array_size(item_size, item_align, capacity) (((item_align) - 1) + sizeof(ArrayHeader) + (item_size) * (capacity))
+void _array_alloc(void **arr, usize item_size, usize item_align, usize capacity) {
+  usize required_size = _array_size(item_size, item_align, capacity);
+  uptr ptr = ARRAY_ALLOC_SIZE(required_size, 1);
+  uptr data = align_up(ptr + sizeof(ArrayHeader), item_align);
+  u8 align_offset = (u8)align_up_offset(ptr + sizeof(ArrayHeader), item_align);
+  ArrayHeader *header = (ArrayHeader *)(data - sizeof(ArrayHeader));
+  header->align_offset = align_offset;
+  header->capacity = isize(capacity);
+  header->count = 0;
+  *(arr) = (rawptr)data;
+}
 void _array_grow(void **arr, usize item_size, usize item_align) {
   assert(item_align <= __BIGGEST_ALIGNMENT__);
   void *old_data = *arr;
@@ -41,13 +43,18 @@ void _array_grow(void **arr, usize item_size, usize item_align) {
     _array_alloc(arr, ARRAY_DEFAULT_SIZE, item_size, item_align);
   } else {
     ArrayHeader *header = array_header(arr);
-    usize old_size = _array_size(header->count, item_size);
-    if (header->count >= header->capacity) {
-      void *old_header = old_data - sizeof(ArrayHeader);
-      _array_alloc(arr, header->capacity * 2, item_size, item_align);
-      memcpy(old_header, *arr, old_size);
-      ARRAY_FREE(old_header);
-    }
+    if (expect_near(header->count < header->capacity)) return;
+    void *old_ptr = old_data - sizeof(ArrayHeader);
+    usize old_size = _array_size(item_size, item_align, usize(header->capacity));
+    _array_alloc(arr, item_size, item_align, usize(header->capacity) * 2);
+    memcpy(old_ptr, *arr, old_size);
+    ARRAY_FREE(old_header);
+  }
+}
+void array_free(void **arr) {
+  if (*arr != nil) {
+    ARRAY_FREE(*arr);
+    *arr = nil;
   }
 }
 

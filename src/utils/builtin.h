@@ -31,6 +31,12 @@
 #define STRUCT2(name, alignment) \
   typedef struct name name;      \
   struct alignto(alignment) name
+#define PACKED_STRUCT(name) \
+  typedef struct name name; \
+  struct __attribute__((packed)) name
+#define PACKED_STRUCT2(name, alignment) \
+  typedef struct name name;             \
+  struct __attribute__((packed)) name
 
 // uptr, usize
 #define nil ((void *)0)
@@ -344,15 +350,17 @@ ASSERT(sizeof(bf16) == 2);
 #endif
 
 // builtins - https://clang.llvm.org/docs/LanguageExtensions.html#builtin-functions
-#define asm                    __asm__
-#define typeof(x)              __typeof__(x)
-#define sizeof_bits(x)         (sizeof(x) * 8)
-#define countof(x)             (isize(sizeof(x)) / isize(sizeof((x)[0])))
-#define alignof(x)             __alignof__(x)
-#define alignof_bits(x)        (alignof(x) * 8)
-#define offsetof(t, key)       __builtin_offsetof(t, key)
-#define align_up(ptr, align)   __builtin_align_up(ptr, align)
-#define align_down(ptr, align) __builtin_align_down(ptr, align)
+#define asm                           __asm__
+#define typeof(x)                     __typeof__(x)
+#define sizeof_bits(x)                (sizeof(x) * 8)
+#define countof(x)                    (isize(sizeof(x)) / isize(sizeof((x)[0])))
+#define alignof(x)                    __alignof__(x)
+#define alignof_bits(x)               (alignof(x) * 8)
+#define offsetof(t, key)              __builtin_offsetof(t, key)
+#define align_up_offset(ptr, align)   (-(ptr) & (align - 1))
+#define align_up(ptr, align)          ((ptr) + align_up_offset(ptr, align))
+#define align_down(ptr, align)        ((ptr) & (align - 1))
+#define align_down_offset(ptr, align) ((ptr) - align_down(ptr, align))
 
 /* NOTE: __builtin_alloca() produces 6 instructions the first time, or 3 when reusing the same size */
 #define with_stack_allocator(stack)

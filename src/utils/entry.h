@@ -50,9 +50,9 @@ void _init_threads() {
   logical_core_count = info.dwNumberOfProcessors; /* NOTE: this fails above 64 cores... */
     #elif OS_LINUX
   u8 cpu_masks[64];
-  iptr written_masks_size = sched_getaffinity(0, sizeof(cpu_masks), (u8 *)&cpu_masks);
+  isize written_masks_size = sched_getaffinity(0, sizeof(cpu_masks), (u8 *)&cpu_masks);
   assert(written_masks_size >= 0);
-  for (iptr i = 0; i < written_masks_size; i++) {
+  for (isize i = 0; i < written_masks_size; i++) {
     logical_core_count += count_ones(u8, cpu_masks[i]);
   }
     #else
@@ -75,10 +75,10 @@ void _init_threads() {
       rlimit stack_size_limit;
       assert(getrlimit(RLIMIT_STACK, &stack_size_limit) >= 0);
       u64 stack_size = stack_size_limit.rlim_cur;
-      iptr stack = mmap(0, stack_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_GROWSDOWN | MAP_STACK, -1, 0);
+      uptr stack = mmap(0, stack_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_GROWSDOWN | MAP_STACK, -1, 0);
       assert(stack != -1);
     #if ARCH_STACK_DIRECTION == -1
-      stack = stack + iptr(stack_size) - iptr(sizeof(new_thread_data));
+      stack = stack + stack_size - sizeof(new_thread_data);
       new_thread_data *stack_data = (new_thread_data *)(stack);
     #else
       new_thread_data *stack_data = (new_thread_data *)(stack);
@@ -88,7 +88,7 @@ void _init_threads() {
       stack_data->param = (rawptr)uptr(t);
       ThreadFlags flags = CLONE_VM | CLONE_FS | CLONE_FILES | CLONE_SIGHAND | CLONE_THREAD | CLONE_SYSVSEM;
       /* NOTE: SIGCHLD is the only one that doesn't print garbage depending on which thread exits... */
-      iptr error = newthread(flags | (ThreadFlags)SIGCHLD, stack_data);
+      isize error = newthread(flags | (ThreadFlags)SIGCHLD, stack_data);
       assert(error >= 0);
   #else
       assert(false);

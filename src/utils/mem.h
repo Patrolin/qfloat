@@ -40,8 +40,8 @@ typedef enum : DWORD {
 
 // foreign ExceptionFilter* SetUnhandledExceptionFilter(ExceptionFilter filter_callback);
 foreign Handle AddVectoredExceptionHandler(uptr run_first, ExceptionFilter handler);
-foreign iptr VirtualAlloc(iptr address, usize size, AllocTypeFlags type_flags, AllocProtectFlags protect_flags);
-foreign BOOL VirtualFree(iptr address, usize size, AllocTypeFlags type_flags);
+foreign uptr VirtualAlloc(uptr address, usize size, AllocTypeFlags type_flags, AllocProtectFlags protect_flags);
+foreign BOOL VirtualFree(uptr address, usize size, AllocTypeFlags type_flags);
 #elif OS_LINUX
 typedef enum : u32 {
   PROT_EXEC = 1 << 0,
@@ -55,10 +55,10 @@ typedef enum : u32 {
   MAP_STACK = 1 << 17,
 } AllocTypeFlags;
 
-iptr mmap(rawptr address, usize size, ProtectionFlags protection_flags, AllocTypeFlags type_flags, FileHandle fd, usize offset) {
+uptr mmap(rawptr address, usize size, ProtectionFlags protection_flags, AllocTypeFlags type_flags, FileHandle fd, usize offset) {
   return syscall6(SYS_mmap, (uptr)address, size, protection_flags, type_flags, (uptr)fd, offset);
 }
-iptr munmap(iptr address, usize size) {
+uptr munmap(uptr address, usize size) {
   return syscall2(SYS_munmap, (uptr)address, size);
 }
 #endif
@@ -70,8 +70,8 @@ ExceptionResult _page_fault_handler(_EXCEPTION_POINTERS *exception_info) {
   DWORD exception_code = exception->ExceptionCode;
   if (expect_near(exception_code == EXCEPTION_ACCESS_VIOLATION)) {
     uptr ptr = exception->ExceptionInformation[1];
-    iptr page_ptr = iptr(ptr) & ~iptr(OS_PAGE_SIZE - 1);
-    iptr commited_ptr = VirtualAlloc(page_ptr, OS_PAGE_SIZE, MEM_COMMIT, PAGE_READWRITE);
+    uptr page_ptr = ptr & ~uptr(OS_PAGE_SIZE - 1);
+    uptr commited_ptr = VirtualAlloc(page_ptr, OS_PAGE_SIZE, MEM_COMMIT, PAGE_READWRITE);
     return page_ptr != 0 && commited_ptr != 0 ? EXCEPTION_CONTINUE_EXECUTION : EXCEPTION_EXECUTE_HANDLER;
   }
   return EXCEPTION_EXECUTE_HANDLER;
@@ -97,7 +97,7 @@ Bytes page_reserve(usize size) {
 #endif
   return buffer;
 }
-void page_free(iptr ptr) {
+void page_free(uptr ptr) {
 #if OS_WINDOWS
   assert(VirtualFree(ptr, 0, MEM_RELEASE));
 #elif OS_LINUX
@@ -109,27 +109,27 @@ void page_free(iptr ptr) {
 
 // wait-free population oblivious arena (not guaranteed to use minimal space)
 STRUCT(ArenaAllocator) {
-  iptr next;
-  iptr end;
+  uptr next;
+  uptr end;
 };
 global ArenaAllocator global_arena;
 static ArenaAllocator arena_allocator(Bytes buffer) {
-  return (ArenaAllocator){iptr(buffer.ptr), iptr(buffer.ptr + buffer.size)};
+  return (ArenaAllocator){uptr(buffer.ptr), uptr(buffer.ptr + buffer.size)};
 }
 
 #define arena_alloc(arena, t)                      ((t *)arena_alloc_size(arena, sizeof(t), alignof(t)))
 #define arena_alloc_array(arena, t, count)         ((t *)arena_alloc_size(arena, sizeof(t) * count, alignof(t)))
 #define arena_alloc_flexible(arena, t1, t2, count) ((t1 *)arena_alloc_size(arena, sizeof(t1) + sizeof(t2) * count, alignof(t1)))
-#define arena_alloc_size(arena, size, align) arena_alloc_impl(arena, size, iptr(align)-1)
-iptr arena_alloc_impl(ArenaAllocator *arena, usize size, iptr align_low_mask) {
+#define arena_alloc_size(arena, size, align)       arena_alloc_impl(arena, size, uptr(align) - 1)
+uptr arena_alloc_impl(ArenaAllocator *arena, usize size, uptr align_low_mask) {
   // assert(count_ones(align_mask + 1) == 1);
-  iptr ptr = atomic_fetch_add(&arena->next, iptr(size) + align_low_mask);
+  uptr ptr = atomic_fetch_add(&arena->next, size + align_low_mask);
   ptr = align_up(ptr, align_low_mask + 1);
-  assert(ptr + iptr(size) <= arena->end);
+  assert(ptr + size <= arena->end);
   memset((byte *)ptr, 0, size);
   return ptr;
 }
-static void arena_reset(ArenaAllocator *arena, iptr next) {
+static void arena_reset(ArenaAllocator *arena, uptr next) {
   arena->next = next;
   assert(atomic_load(&arena->next) == next); // assert single-threaded
 }

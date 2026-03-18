@@ -12,6 +12,7 @@ void main_singlecore() {
   array_push(&arr, 2);
   array_push(&arr, 3);
   printfln("len(&arr): %", isize, len(&arr));
+  printfln("align_offset: %", usize, array_header(&arr)->align_offset);
   for (isize i = 0; i < len(&arr); i++) {
     printfln("arr[%]: %", isize, i, i32, arr[i]);
   }

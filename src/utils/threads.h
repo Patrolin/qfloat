@@ -78,10 +78,10 @@ STRUCT(rlimit) {
   rlim_t rlim_cur;
   rlim_t rlim_max;
 };
-iptr getrlimit(ResourceType key, rlimit *value) {
+isize getrlimit(ResourceType key, rlimit *value) {
   return syscall2(SYS_getrlimit, key, (uptr)value);
 }
-iptr sched_getaffinity(pid_t pid, usize masks_size, u8 *masks) {
+isize sched_getaffinity(pid_t pid, usize masks_size, u8 *masks) {
   return syscall3(SYS_sched_getaffinity, (uptr)pid, masks_size, (uptr)masks);
 };
 
@@ -121,15 +121,15 @@ typedef enum : CINT {
   FUTEX_WAIT = 0,
   FUTEX_WAKE = 1,
 } FutexOp;
-typedef iptr time_t;
+typedef isize time_t;
 STRUCT(timespec) {
   time_t t_sec;
   time_t t_nsec;
 };
-iptr futex_wait(u32 *address, u32 while_value, readonly timespec *timeout) {
+isize futex_wait(u32 *address, u32 while_value, readonly timespec *timeout) {
   return syscall4(SYS_futex, (uptr)address, FUTEX_WAIT, while_value, (uptr)timeout);
 }
-iptr futex_wake(u32 *address, u32 count_to_wake) {
+isize futex_wake(u32 *address, u32 count_to_wake) {
   return syscall3(SYS_futex, (uptr)address, FUTEX_WAKE, count_to_wake);
 }
 #else

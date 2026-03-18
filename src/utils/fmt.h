@@ -105,12 +105,12 @@ usize sprint_i8(i8 value, byte *buffer_end) {
   return sprint_i64(value, buffer_end);
 }
 
-#define sprint_size_hex_pad(value) (2 + 2 * sizeof(u64))
+#define sprint_size_uptr(value) (2 + 2 * sizeof(uptr))
 byte *HEX_DIGITS = "0123456789ABCDEF";
-usize sprint_hex_pad(u64 value, byte *buffer_end) {
+usize sprint_uptr(uptr value, byte *buffer_end) {
   isize i = 0;
   do {
-    u64 digit = value & 0xf;
+    uptr digit = value & 0xf;
     value = value >> 4;
     buffer_end[--i] = HEX_DIGITS[digit];
   } while (i > -2 * isize(sizeof(u64)));
@@ -132,32 +132,13 @@ usize sprint_hex_impl(u64 value, byte *buffer_end) {
   return usize(-i);
 }
 
-#if ARCH_IS_64_BIT
-  #define sprint_size_uptr(value) sprint_size_u64(value)
-usize sprint_uptr(uptr value, byte *buffer_end) {
-  return sprint_u64(u64(value), buffer_end);
-}
-  #define sprint_size_iptr(value) sprint_size_u64(value)
-usize sprint_iptr(iptr value, byte *buffer_end) {
-  return sprint_i64(i64(value), buffer_end);
-}
-#elif ARCH_IS_32_BIT
-  #define sprint_size_uptr(value) sprint_size_u32(value)
-usize sprint_uptr(uptr value, byte *buffer_end) {
-  return sprint_u32(u32(value), buffer_end);
-}
-  #define sprint_size_iptr(value) sprint_size_u32(value)
-usize sprint_iptr(iptr value, byte *buffer_end) {
-  return sprint_u32(u32(value), buffer_end);
-}
-#endif
-#define sprint_size_usize(value) sprint_size_uptr(value)
+#define sprint_size_usize(value) sprint_size_u64(value)
 usize sprint_usize(usize value, byte *buffer_end) {
-  return sprint_uptr(value, buffer_end);
+  return sprint_u64(value, buffer_end);
 }
-#define sprint_size_isize(value) sprint_size_iptr(value)
+#define sprint_size_isize(value) sprint_size_i64(value)
 usize sprint_isize(isize value, byte *buffer_end) {
-  return sprint_iptr(value, buffer_end);
+  return sprint_i64(value, buffer_end);
 }
 
 // sprintf()
