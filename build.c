@@ -44,6 +44,8 @@ void set_c99(BuildArgs *args) {
   arg_alloc(args, "-Wnullable-to-nonnull-conversion");
   arg_alloc(args, "-Wuninitialized");
   arg_alloc(args, "-Wconditional-uninitialized");
+  arg_alloc(args, "-Wswitch");
+  arg_alloc(args, "-Wimplicit-fallthrough");
 #if NOLIBC
   arg_alloc(args, "-nostdlib");
   arg_alloc(args, "-mno-stack-arg-probe");
