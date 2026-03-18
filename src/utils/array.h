@@ -46,8 +46,8 @@ void _array_grow(void **arr, usize item_size, usize item_align_mask) {
     void *old_ptr = old_data - sizeof(ArrayHeader);
     usize old_size = _array_size(item_size, item_align_mask, usize(header->capacity));
     _array_alloc(arr, item_size, item_align_mask, usize(header->capacity) * 2);
-    memcpy(old_ptr, *arr, old_size);
-    ARRAY_FREE(old_header);
+    assert(false); // memcpy(ptr, *arr, old_size); // TODO: `ptr = ARRAY_RESIZE(old_ptr, old_size, size)`;
+    ARRAY_FREE(old_ptr);
   }
 }
 void array_free(void **arr) {
