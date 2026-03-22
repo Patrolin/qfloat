@@ -69,7 +69,7 @@ bool ring_buffer_read_duplicated(RingBuffer *rb, u64 *value_ptr, i32 *read_index
 typedef u32 AllocatorBlockSize;
 #define FREE_LIST_COUNT ((sizeof_bits(AllocatorBlockSize) - MEM_IMPLICIT_MANTISSA_BITS) * MEM_MANTISSA_MAX)
 ASSERT(FREE_LIST_COUNT == 232);
-/*
+/* TODO: remove this
   AllocatorBlockCommon: u32 common // {u1 used, u31 size}
   UsedBlock: AllocatorBlockCommon common .. u16 align_offset, u8 data[]
   FreeBlock: AllocatorBlockCommon common, u32 distance_to_prev_block, FreeList* free_list ..
@@ -89,11 +89,13 @@ ASSERT(FREE_LIST_COUNT == 232);
     return atomic_compare_exchange(&prev_block.common, prev_block_size, prev_block_size + block_size)
   }
 */
+
+/*
 STRUCT(FreeList) {
   FreeList *free_list;
 };
 typedef AllocatorBlockSize AllocatorBlockCommon;
-typedef u16 UsedBlockPrefix; /* TODO: does any CPU have `CACHE_LINE_SIZE >= 256`? */
+typedef u16 UsedBlockPrefix; // TODO: does any CPU have `CACHE_LINE_SIZE >= 256`?
 STRUCT(FreeBlockHeader) {
   AllocatorBlockCommon common;
   AllocatorBlockSize distance_to_prev_block;
@@ -130,7 +132,7 @@ usize _free_list_size(uptr n) {
   return (mantissa | MEM_MANTISSA_MAX) << (exponent - 1);
 }
 
-#define alloc(t)                      ((t *)alloc_size(allocator, sizeof(t), alignof(t)))
+#define alloc_type(t)                 ((t *)alloc_size(allocator, sizeof(t), alignof(t)))
 #define alloc_array(t, count)         ((t *)alloc_size(allocator, sizeof(t) * count, alignof(t)))
 #define alloc_flexible(t1, t2, count) ((t1 *)alloc_size(allocator, sizeof(t1) + sizeof(t2) * count, alignof(t1)))
 #define alloc_size(size, align)       _alloc_impl(&global_allocator, size, max(align, alignof(UsedBlockPrefix)) - 1)
@@ -156,3 +158,4 @@ void free(GeneralAllocator *allocator, void *ptr) {
 void reclaim_memory() {
   //..reclaim memory
 }
+*/
