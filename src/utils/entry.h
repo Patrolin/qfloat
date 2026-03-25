@@ -24,10 +24,6 @@ void _init_console() {
   // ASSERT(false);
 #endif
 }
-void _init_shared_arena() {
-  Bytes buffer = page_reserve(VIRTUAL_MEMORY_TO_RESERVE);
-  global_arena = arena_allocator(buffer);
-}
 #if SINGLE_CORE
 forward_declare void main_singlecore();
 #else
@@ -61,8 +57,8 @@ void _init_threads() {
   #endif
   assert(logical_core_count > 0);
   // start threads
-  ThreadInfo *thread_infos = arena_alloc_array(&global_arena, ThreadInfo, logical_core_count);
-  u64 *values = arena_alloc_array(&global_arena, u64, logical_core_count);
+  ThreadInfo *thread_infos = alloc_array(ThreadInfo, logical_core_count);
+  u64 *values = alloc_array(u64, logical_core_count);
   global_threads.logical_core_count = logical_core_count;
   global_threads.thread_infos = thread_infos;
   global_threads.values = values;
@@ -105,7 +101,7 @@ noreturn_ _init_process() {
 #endif
   _init_console();
   _init_page_fault_handler();
-  _init_shared_arena();
+  _init_allocator(8*MebiByte);
 #if SINGLE_CORE
   main_singlecore();
 #else

@@ -1,8 +1,9 @@
 #pragma once
 #include "builtin.h"
 #include "fmt.h"
-#include "os.h"
 #include "mem.h"
+#include "os.h"
+#include "array.h"
 
 // exit
 #if OS_WINDOWS
@@ -73,26 +74,6 @@ foreign ModuleHandle LoadLibraryA(rcstring dll_path);
 rawptr GetProcAddress(ModuleHandle module, cstring proc_name);
 #endif
 
-STRUCT(BuildArgs) {
-  string *start;
-  usize count;
-};
-#define arg_alloc(args, arg) arg_alloc_impl(args, string(arg))
-#define arg_alloc2(args, arg1, arg2)  \
-  arg_alloc_impl(args, string(arg1)); \
-  arg_alloc_impl(args, string(arg2))
-static void arg_alloc_impl(BuildArgs *restrict args, string arg) {
-  if (expect_far(args->start == 0)) {
-    uptr start = align_up(global_arena.next, alignof(string));
-    args->start = (string *)start;
-    global_arena.next = start;
-  }
-  string *ptr = (string *)atomic_fetch_add(&global_arena.next, sizeof(string));
-  *ptr = arg;
-  // assert(!out_of_memory && single_threaded)
-  assert(uptr(ptr) + sizeof(string) < global_arena.end && ptr == &args->start[args->count]);
-  args->count += 1;
-}
 #if BUILD_SYSTEM
 /* NOTE: we need to have the alignment at compile time, so the optimizer can make better decisions */
 uptr _get_cache_alignment() {
@@ -108,24 +89,28 @@ uptr _get_cache_alignment() {
 }
 #endif
 
+#define args_push(args, arg) array_push(args, string(arg))
+#define args_push2(args, arg1, arg2) \
+  array_push(args, string(arg1));    \
+  array_push(args, string(arg2))
 #define run_process(app, args) run_process_impl(string(app), args)
-static void run_process_impl(readonly string app, readonly BuildArgs *args) {
+static void run_process_impl(readonly string app, string **args) {
 #if OS_WINDOWS
   // copy to a single cstring
-  byte *command = (byte *)global_arena.next;
+  byte *command = alloc_array(byte, KibiByte); // TODO: alloc the correct size here, probably just stringbuilder?
   memcpy(command, app.ptr, app.size);
-  byte *next = command + app.size;
-  if (expect_near(args != 0)) {
-    for (usize i = 0; i < args->count; i++) {
-      string str = args->start[i];
-      *(next++) = ' ';
-      memcpy(next, str.ptr, str.size);
-      next += str.size;
+  byte *dest = command + app.size;
+  if (expect_near(args != 0 && *args != 0)) {
+    for (isize i = 0; i < len(args); i++) {
+      string str = (*args)[i];
+      *(dest++) = ' ';
+      memcpy(dest, str.ptr, str.size);
+      dest += str.size;
     }
   }
-  (*next) = '\n';
-  string command_str = (string){command, usize(next - command + 1)};
-  (*next) = '\0';
+  (*dest) = '\n';
+  string command_str = (string){command, usize(dest - command + 1)};
+  (*dest) = '\0';
   // start new process
   STARTUPINFOA startup_info = {
     .cb = sizeof(STARTUPINFOA),
@@ -150,6 +135,4 @@ static void run_process_impl(readonly string app, readonly BuildArgs *args) {
   // TODO: In a new thread: `execve(command, args, 0);`
   ASSERT(false);
 #endif
-  // assert single-threaded
-  assert(atomic_compare_exchange(&global_arena.next, (uptr *)&command, (uptr)command));
 }

@@ -107,31 +107,61 @@ void page_free(uptr ptr) {
 #endif
 }
 
-// wait-free population oblivious arena (not guaranteed to use minimal space)
-STRUCT(ArenaAllocator) {
+// multi-threaded O(1) allocator
+STRUCT(XorFreeListNode) {
   uptr next;
-  uptr end;
 };
-global ArenaAllocator global_arena;
-static ArenaAllocator arena_allocator(Bytes buffer) {
-  return (ArenaAllocator){uptr(buffer.ptr), uptr(buffer.ptr + buffer.size)};
-}
+STRUCT_ALIGNED(Allocator, 16) {
+  // TODO: byte *buffer_start // (also the reclaim_queue)
+  byte *buffer_next;
+  byte *buffer_end;
+  XorFreeListNode *free_lists[16];
+};
+STRUCT(AllocatorBlockHeader) {
+  AllocatorBlockHeader *prev_block;
+  /* u63 next_block, u1 is_used */
+  uptr next_block;
+};
+ASSERT(sizeof(AllocatorBlockHeader) % __BIGGEST_ALIGNMENT__ == 0);
+STRUCT(AllocatorFreeBlock) {
+  XorFreeListNode free_list;
+};
+ASSERT(sizeof(AllocatorBlockHeader) + sizeof(AllocatorFreeBlock) == 24);
 
-#define arena_alloc(arena, t)                      ((t *)arena_alloc_size(arena, sizeof(t), alignof(t)))
-#define arena_alloc_array(arena, t, count)         ((t *)arena_alloc_size(arena, sizeof(t) * count, alignof(t)))
-#define arena_alloc_flexible(arena, t1, t2, count) ((t1 *)arena_alloc_size(arena, sizeof(t1) + sizeof(t2) * count, alignof(t1)))
-#define arena_alloc_size(arena, size, align)       arena_alloc_impl(arena, size, uptr(align) - 1)
-uptr arena_alloc_impl(ArenaAllocator *arena, usize size, uptr align_low_mask) {
-  // assert(count_ones(align_mask + 1) == 1);
-  uptr ptr = atomic_fetch_add(&arena->next, size + align_low_mask);
-  ptr = align_up(ptr, align_low_mask + 1);
-  assert(ptr + size <= arena->end);
-  memset((byte *)ptr, 0, size);
-  return ptr;
+Allocator global_allocator = {};
+void _init_allocator(usize buffer_size) {
+  Bytes buffer = page_reserve(buffer_size);
+  global_allocator.buffer_next = buffer.ptr;
+  global_allocator.buffer_end = buffer.ptr + buffer_size;
 }
-static void arena_reset(ArenaAllocator *arena, uptr next) {
-  arena->next = next;
-  assert(atomic_load(&arena->next) == next); // assert single-threaded
+rawptr alloc_size(usize size, usize align_mask) {
+  // TODO: get next valid block
+  size = sizeof(AllocatorBlockHeader) + max(size + align_mask, sizeof(AllocatorFreeBlock));
+  AllocatorBlockHeader *block = nil;
+  // make new block if necessary
+  if (block == nil) {
+    block = (AllocatorBlockHeader *)atomic_fetch_add(&global_allocator.buffer_next, iptr(size));
+    assert(uptr(block) + size < uptr(global_allocator.buffer_end));
+  }
+  // TODO: split block if possible
+  // write block metadata
+  block->next_block |= 1;
+  uptr ptr = uptr(block + 1);
+  if (align_mask != 0) {
+    ptr = align_up(ptr, align_mask);
+    usize offset = align_up_offset(ptr, align_mask);
+    *(u8 *)(ptr - 1) = u8(offset);
+  }
+  return rawptr(ptr);
+}
+#define alloc_type(T)         ((T *)alloc_size(sizeof(T), alignof(T) - 1))
+#define alloc_array(T, count) ((T *)alloc_size(sizeof(T) * count, alignof(T) - 1))
+
+void free_size(void *ptr, usize align_mask) {
+  //..push to global_threads->reclaim_queue
+}
+void reclaim_memory() {
+  //..reclaim memory
 }
 
 /* IWYU pragma: begin_exports */

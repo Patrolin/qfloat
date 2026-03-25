@@ -1,9 +1,10 @@
-// clang build.c -o build.exe -fno-builtin && ./build.exe
-// clang build.c -o build.exe -fno-builtin -DNOLIBC -masm=intel && ./build.exe
+// clang build.c -o build.exe -march=native -fno-builtin && ./build.exe
+// clang build.c -o build.exe -march=native -fno-builtin -DNOLIBC -masm=intel && ./build.exe
 #pragma push_macro("SINGLE_CORE")
 #define SINGLE_CORE 1
 #include "src/utils/entry.h"
 #include "src/utils/process.h"
+#include "src/utils/array.h"
 #pragma pop_macro("SINGLE_CORE")
 
 // paths
@@ -31,80 +32,80 @@ void main_singlecore() {
   // run_tests();
 }
 
-void set_c99(BuildArgs *args) {
-  arg_alloc(args, "-march=native");
-  arg_alloc(args, "-masm=intel");
-  arg_alloc(args, "-std=c99");
-  arg_alloc(args, "-fno-builtin"); /* NOTE: don't assume the types of functions like `free()` */
-  arg_alloc(args, "-fno-signed-char");
-  arg_alloc(args, "-Werror");
-  arg_alloc(args, "-Wconversion");
-  arg_alloc(args, "-Wsign-conversion");
-  arg_alloc(args, "-Wsign-compare");
-  arg_alloc(args, "-Wnullable-to-nonnull-conversion");
-  arg_alloc(args, "-Wuninitialized");
-  arg_alloc(args, "-Wconditional-uninitialized");
-  arg_alloc(args, "-Wswitch");
-  arg_alloc(args, "-Wimplicit-fallthrough");
+void set_c99(string **args) {
+  args_push(args, "-march=native");
+  args_push(args, "-masm=intel");
+  args_push(args, "-std=c99");
+  args_push(args, "-fno-builtin"); /* NOTE: don't assume the types of functions like `free()` */
+  args_push(args, "-fno-signed-char");
+  args_push(args, "-Werror");
+  args_push(args, "-Wconversion");
+  args_push(args, "-Wsign-conversion");
+  args_push(args, "-Wsign-compare");
+  args_push(args, "-Wnullable-to-nonnull-conversion");
+  args_push(args, "-Wuninitialized");
+  args_push(args, "-Wconditional-uninitialized");
+  args_push(args, "-Wswitch");
+  args_push(args, "-Wimplicit-fallthrough");
 #if NOLIBC
-  arg_alloc(args, "-nostdlib");
-  arg_alloc(args, "-mno-stack-arg-probe");
-  arg_alloc(args, "-DNOLIBC");
+  args_push(args, "-nostdlib");
+  args_push(args, "-mno-stack-arg-probe");
+  args_push(args, "-DNOLIBC");
 #endif
 #if SINGLE_CORE
-  arg_alloc(args, "-DSINGLE_CORE");
+  args_push(args, "-DSINGLE_CORE");
 #endif
 #if DEBUG
-  arg_alloc(args, "-DDEBUG");
+  args_push(args, "-DDEBUG");
 #endif
 }
 void run_foo() {
-  BuildArgs args = {};
-  arg_alloc(&args, FOO);
-  arg_alloc2(&args, "-o", FOO_EXE);
+  string *args = nil;
+  args_push(&args, FOO);
+  args_push2(&args, "-o", FOO_EXE);
   set_c99(&args);
   run_process("clang", &args);
   run_process("./" FOO_EXE, 0);
 }
 void gen_float_tables() {
-  BuildArgs args = {};
-  arg_alloc(&args, GEN_FLOAT_TABLES);
-  arg_alloc2(&args, "-o", GEN_FLOAT_TABLES_EXE);
+  string *args = nil;
+  args_push(&args, GEN_FLOAT_TABLES);
+  args_push2(&args, "-o", GEN_FLOAT_TABLES_EXE);
   set_c99(&args);
   run_process("clang", &args);
   run_process("./" GEN_FLOAT_TABLES_EXE, 0);
 }
 void build_lib_charconv() {
-  BuildArgs args = {};
-  arg_alloc(&args, LIB_CHARCONV);
-  arg_alloc2(&args, "-o", LIB_CHARCONV_DLL);
-  arg_alloc(&args, "-shared");
-  arg_alloc(&args, "-std=c++17");
-  arg_alloc(&args, "-O2");
+  string *args = nil;
+  args_push(&args, LIB_CHARCONV);
+  args_push2(&args, "-o", LIB_CHARCONV_DLL);
+  args_push(&args, "-shared");
+  args_push(&args, "-std=c++17");
+  args_push(&args, "-O2");
   run_process("clang", &args);
 }
 void run_tests() {
-  BuildArgs args = {};
+  string *args = nil;
   // input
-  arg_alloc(&args, TEST_QFLOAT);
-  arg_alloc2(&args, "-o", TEST_QFLOAT_EXE);
+  args_push(&args, TEST_QFLOAT);
+  args_push2(&args, "-o", TEST_QFLOAT_EXE);
   // c standard
   set_c99(&args);
   // linker
-  arg_alloc(&args, "-fuse-ld=lld");
+  args_push(&args, "-fuse-ld=lld");
 #if OS_WINDOWS
-  arg_alloc(&args, "-Wl,/STACK:0x100000");
+  args_push(&args, "-Wl,/STACK:0x100000");
 #elif OS_LINUX
   /* NOTE: linux forces it's own stack size on you, which you can only reduce at runtime */
 #endif
   // params
 #if OPT
-  arg_alloc(&args, "-O2");
-  arg_alloc(&args, "-flto");
-  arg_alloc(&args, "-g");
+  args_push(&args, "-O2");
+  args_push(&args, "-flto");
+  args_push(&args, "-g");
 #else
-  arg_alloc(&args, "-O0");
-  arg_alloc(&args, "-g");
+  args_push(&args, "-O0");
+  args_push(&args, "-g");
 #endif
   // compile
   // TODO: delete .pdb, .rdi?

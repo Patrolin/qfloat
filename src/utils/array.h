@@ -5,7 +5,7 @@
 
 // params
 #define ARRAY_DEFAULT_SIZE            4
-#define ARRAY_ALLOC_SIZE(size, align) arena_alloc_size(&global_arena, size, align)
+#define ARRAY_ALLOC(size, align_mask) alloc_size((size), (align_mask))
 #define ARRAY_FREE(ptr)
 #define MAP_HASH(x)         noise_u64(usize(x))
 #define MAP_KEY_TYPE        isize
@@ -16,7 +16,7 @@
 // array
 #define array(T)          T *
 #define array_header(arr) ((ArrayHeader *)(uptr(*(arr)) - sizeof(ArrayHeader)))
-PACKED_STRUCT(ArrayHeader) {
+STRUCT_PACKED(ArrayHeader) {
   u8 align_offset;
   isize capacity;
   isize count;
@@ -25,28 +25,28 @@ PACKED_STRUCT(ArrayHeader) {
 #define len(arr)                                          (*(arr) == nil ? 0 : array_header(arr)->count)
 #define array_push(arr, value)                            (_array_grow((void **)(arr), sizeof(**(arr)), alignof(**(arr)) - 1), ((*(arr))[(array_header(arr))->count++] = value))
 #define _array_size(item_size, item_align_mask, capacity) (item_align_mask + sizeof(ArrayHeader) + (item_size) * (capacity))
-void _array_alloc(void **arr, usize item_size, usize item_align_mask, usize capacity) {
+void _array_alloc(void **arr, usize item_size, usize item_align_mask, usize capacity, usize count) {
   usize required_size = _array_size(item_size, item_align_mask, capacity);
-  uptr ptr = ARRAY_ALLOC_SIZE(required_size, 1);
-  uptr data = align_up2(ptr + sizeof(ArrayHeader), item_align_mask);
-  u8 align_offset = (u8)align_up_offset2(ptr + sizeof(ArrayHeader), item_align_mask);
+  uptr ptr = (uptr)ARRAY_ALLOC(required_size, 0);
+  uptr data = align_up(ptr + sizeof(ArrayHeader), item_align_mask);
+  u8 align_offset = (u8)align_up_offset(ptr + sizeof(ArrayHeader), item_align_mask);
   ArrayHeader *header = (ArrayHeader *)(data - sizeof(ArrayHeader));
   header->align_offset = align_offset;
   header->capacity = isize(capacity);
-  header->count = 0;
+  header->count = isize(count);
   *(arr) = (rawptr)data;
 }
 void _array_grow(void **arr, usize item_size, usize item_align_mask) {
   void *old_data = *arr;
   if (old_data == nil) {
-    _array_alloc(arr, item_size, item_align_mask, ARRAY_DEFAULT_SIZE);
+    _array_alloc(arr, item_size, item_align_mask, ARRAY_DEFAULT_SIZE, 0);
   } else {
     ArrayHeader *header = array_header(arr);
-    if (expect_near(header->count < header->capacity)) return;
-    void *old_ptr = old_data - sizeof(ArrayHeader);
-    usize old_size = _array_size(item_size, item_align_mask, usize(header->capacity));
-    _array_alloc(arr, item_size, item_align_mask, usize(header->capacity) * 2);
-    assert(false); // memcpy(ptr, *arr, old_size); // TODO: `ptr = ARRAY_RESIZE(old_ptr, old_size, size)`;
+    usize count = usize(header->count);
+    usize capacity = usize(header->capacity);
+    if (expect_near(count < capacity)) return;
+    _array_alloc(arr, item_size, item_align_mask, capacity * 2, count);
+    memcpy(*arr, old_data, item_size * count);
     ARRAY_FREE(old_ptr);
   }
 }
@@ -75,15 +75,15 @@ STRUCT(MapSlot) {
   isize key;
 };
 #define map_slot(arr, i)           _map_slots((arr), sizeof(**(arr)))[i]
-#define map_has(arr, key)          (_map_find((arr), (key)) >= 0)
-#define map_get(arr, key, or_else) ({         \
-  isize _map_i = _map_find((arr), (key));     \
-  _map_i >= 0 ? (*(arr))[_map_i] : (or_else); \
+#define map_has(arr, key)          (_map_find((arr), (key), sizeof(**(arr))) >= 0)
+#define map_get(arr, key, or_else) ({                      \
+  isize _map_i = _map_find((arr), (key), sizeof(**(arr))); \
+  _map_i >= 0 ? (*(arr))[_map_i] : (or_else);              \
 });
-#define map_set(arr, key, value)                                                        \
-  do {                                                                                  \
-    isize _map_i = _map_grow((void **)(arr), (key), sizeof(**(arr)), alignof(**(arr))); \
-    (*(arr))[_map_i] = value;                                                           \
+#define map_set(arr, key, value)                                                            \
+  do {                                                                                      \
+    isize _map_i = _map_grow((void **)(arr), (key), sizeof(**(arr)), alignof(**(arr)) - 1); \
+    (*(arr))[_map_i] = value;                                                               \
   } while (0);
 #define map_remove(arr, key) TODO_tombstones
 isize _map_find(void **arr, MAP_KEY_TYPE key, usize value_size) {
@@ -99,10 +99,10 @@ isize _map_find(void **arr, MAP_KEY_TYPE key, usize value_size) {
     i = (i + probe) % arr_len;
   }
 }
-isize _map_grow(void **arr, MAP_KEY_TYPE key, usize value_size, usize value_align) {
+isize _map_grow(void **arr, MAP_KEY_TYPE key, usize value_size, usize value_align_mask) {
   if (*arr == nil) {
     usize required_size = sizeof(MapHeader) + value_size * ARRAY_DEFAULT_SIZE + (alignof(MapSlot) - 1) + sizeof(MapSlot) * ARRAY_DEFAULT_SIZE;
-    MapHeader *header = (MapHeader *)ARRAY_ALLOC_SIZE(required_size, value_align);
+    MapHeader *header = (MapHeader *)ARRAY_ALLOC(required_size, value_align_mask);
     header->filled = 0;
     header->capacity = ARRAY_DEFAULT_SIZE;
     *arr = header + 1;
@@ -125,6 +125,6 @@ isize _map_grow(void **arr, MAP_KEY_TYPE key, usize value_size, usize value_alig
 
 // set
 #define set(V)                 V *
-#define set_has(arr, value)    (_map_find((arr), (value), sizeof(**(arr)), alignof(**(arr))) >= 0)
-#define set_add(arr, value)    _map_grow((arr), (value), sizeof(**(arr)), alignof(**(arr)))
+#define set_has(arr, value)    (_map_find((arr), (value), sizeof(**(arr))) >= 0)
+#define set_add(arr, value)    _map_grow((arr), (value), sizeof(**(arr)), alignof(**(arr)) - 1)
 #define set_remove(arr, value) map_remove((arr), (value))

@@ -28,15 +28,15 @@
 #define STRUCT(name)        \
   typedef struct name name; \
   struct name
-#define STRUCT2(name, alignment) \
-  typedef struct name name;      \
+#define STRUCT_ALIGNED(name, alignment) \
+  typedef struct name name;             \
   struct alignto(alignment) name
-#define PACKED_STRUCT(name) \
+#define STRUCT_PACKED(name) \
   typedef struct name name; \
   struct __attribute__((packed)) name
-#define PACKED_STRUCT2(name, alignment) \
-  typedef struct name name;             \
-  struct __attribute__((packed)) name
+#define STRUCT_PACKED_ALIGNED(name, alignment) \
+  typedef struct name name;                    \
+  struct __attribute__((packed)) alignto(alignment) name
 
 // uptr, usize
 #define nil ((void *)0)
@@ -358,11 +358,8 @@ ASSERT(sizeof(bf16) == 2);
 #define alignof_bits(x)  (alignof(x) * 8)
 #define offsetof(t, key) __builtin_offsetof(t, key)
 
-// TODO: remove align_up()
-#define align_up_offset(ptr, align)       (-(ptr) & (align - 1))
-#define align_up(ptr, align)              ((ptr) + align_up_offset(ptr, align))
-#define align_up_offset2(ptr, align_mask) (-(ptr) & (align_mask))
-#define align_up2(ptr, align_mask)        ((ptr) + align_up_offset2(ptr, align_mask))
+#define align_up_offset(ptr, align_mask) (-(ptr) & (align_mask))
+#define align_up(ptr, align_mask)        ((ptr) + align_up_offset(ptr, align_mask))
 #define align_down(ptr, align)            ((ptr) & (align - 1))
 #define align_down_offset(ptr, align)     ((ptr) - align_down(ptr, align))
 

@@ -102,7 +102,7 @@ typedef enum : u64 {
 } SignalType;
 // https://nullprogram.com/blog/2023/03/23/
 typedef CUINT _linux_thread_entry(rawptr);
-STRUCT2(new_thread_data, 16) {
+STRUCT_ALIGNED(new_thread_data, 16) {
   _linux_thread_entry *entry;
   rawptr param;
 };
@@ -139,7 +139,7 @@ isize futex_wake(u32 *address, u32 count_to_wake) {
 // shared data
 DISTINCT(u32, Thread);
 #define Thread(x) ((Thread)(x))
-STRUCT2(ThreadInfo, 32) {
+STRUCT_ALIGNED(ThreadInfo, 32) {
   /* NOTE: barriers must be u32 on linux... */
   Thread threads_start;
   Thread threads_end;

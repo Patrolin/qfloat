@@ -142,12 +142,12 @@ uptr _alloc_impl(GeneralAllocator *allocator, usize size, usize align_low_mask) 
   uptr padded_size = max(sizeof(AllocatorBlockCommon) + sizeof(UsedBlockPrefix) + align_low_mask + size, sizeof(FreeBlockHeader));
   uptr ptr = _free_list_get(allocator, padded_size);
   if (ptr == 0) {
-    padded_size = align_up(padded_size, alignof(FreeBlockHeader));
+    padded_size = align_up(padded_size, alignof(FreeBlockHeader)-1);
     ptr = atomic_fetch_add(&allocator->next, padded_size);
     assert(ptr + size <= allocator->end);
   }
-  uptr align_offset = (align_low_mask + 1) - (ptr & align_low_mask); // NOTE: gets optimized into `align_up()`
-  ptr = align_up(ptr, align_low_mask + 1);
+  ptr = align_up(ptr, align_low_mask);
+  uptr align_offset = align_offset(ptr, align_low_mask);
   *(UsedBlockPrefix *)(ptr - sizeof(UsedBlockPrefix)) = (UsedBlockPrefix)align_offset;
   memset((byte *)ptr, 0, size);
   return 0;

@@ -6,9 +6,27 @@
 #define isnan(x) __builtin_isnan(x)
 #define isinf(x) __builtin_isinf(x)
 #define absg(x)  ((x) < 0 ? (-(x)) : (x))
+f64 trunc(f64 x) {
+  f64 result;
+#if ARCH_X64 || ARCH_X86
+  asm("vroundsd %0, %1, %1, $11" : "=x"(result) : "x"(x));
+#else
+  assert(false);
+#endif
+  return result;
+}
+f64 floor(f64 x) {
+  f64 result;
+#if ARCH_X64 || ARCH_X86
+  asm("vroundsd %0, %1, %1, $9" : "=x"(result) : "x"(x));
+#else
+  assert(false);
+#endif
+  return result;
+}
 /* NOTE: libc's `fmod()` returns the `remainder()`... */
-#define remainder(a, b) ((a) - __builtin_trunc((a) / (b)) * b)
-#define modulo(a, b)    ((a) - __builtin_floor((a) / (b)) * b)
+#define remainder(a, b) ((a) - trunc((a) / (b)) * b)
+#define modulo(a, b)    ((a) - floor((a) / (b)) * b)
 #define sin(x)          __builtin_csin(x)
 #define cos(x)          __builtin_ccos(x)
 
