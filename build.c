@@ -1,10 +1,9 @@
-// clang build.c -o build.exe -march=native -fno-builtin && ./build.exe
-// clang build.c -o build.exe -march=native -fno-builtin -DNOLIBC -masm=intel && ./build.exe
+// clang build.c -o build.exe -march=native -masm=intel && ./build.exe
+// clang build.c -o build.exe -march=native -masm=intel -fno-builtin -DNOLIBC && ./build.exe
 #pragma push_macro("SINGLE_CORE")
 #define SINGLE_CORE 1
 #include "src/utils/entry.h"
 #include "src/utils/process.h"
-#include "src/utils/array.h"
 #pragma pop_macro("SINGLE_CORE")
 
 // paths
