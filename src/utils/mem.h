@@ -213,7 +213,7 @@ void _init_allocator(usize buffer_size) {
   AllocatorBlockHeader *first_block = (AllocatorBlockHeader *)(global_allocator.buffer_next);
   first_block->prev_block = PREV_BLOCK_NONE;
 }
-// TODO: merge - if is_used atomic_compare_exchange(next_block, merged)
+// TODO: merge - atomic_compare_exchange(next_block | IS_MERGABLE, merged)
 rawptr alloc_size(usize size, usize align_mask) {
   // TODO: get next valid block
   size = sizeof(AllocatorBlockHeader) + max(align_mask + size, sizeof(AllocatorFreeBlock));
