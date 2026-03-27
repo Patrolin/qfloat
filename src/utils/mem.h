@@ -2,6 +2,11 @@
 #include "builtin.h"
 #include "os.h"
 
+// params
+#define RING_BUFFER_SIZE 4096
+ASSERT_POWER_OF_TWO(RING_BUFFER_SIZE);
+
+// page fault handler
 #if OS_WINDOWS
 typedef enum : DWORD {
   EXCEPTION_ACCESS_VIOLATION = 0xC0000005,
@@ -107,19 +112,83 @@ void page_free(uptr ptr) {
 #endif
 }
 
+// ring buffer
+STRUCT(RingBuffer) {
+  iptr buffer;
+  i32 write_index;
+  i32 default_read_index;
+};
+STRUCT(RingBufferValue) {
+  u32 written;
+  u64 value;
+};
+#define ring_buffer_size() (RING_BUFFER_SIZE * sizeof(RingBufferValue))
+void ring_buffer_write(RingBuffer *rb, u64 value) {
+  // NOTE: wait-free population oblivious, but crash on overrun, zeroed by reader
+  i32 write_index = atomic_fetch_add(&rb->write_index, sizeof(RingBufferValue));
+  RingBufferValue *ptr = (RingBufferValue *)((rb->buffer + write_index) & (RING_BUFFER_SIZE - 1));
+  assert2(ptr->written == 0, string("RingBuffer overrun"));
+  ptr->value = value;
+  atomic_store(&ptr->written, 1);
+}
+forward_declare void wait_on_address(u32 *address, u32 while_value);
+void ring_buffer_write_or_wait(RingBuffer *rb, u64 value) {
+  // NOTE: wait-free population oblivious, but wait on overrun, zeroed by reader
+  i32 write_index = atomic_fetch_add(&rb->write_index, sizeof(RingBufferValue));
+  RingBufferValue *ptr = (RingBufferValue *)((rb->buffer + write_index) & (RING_BUFFER_SIZE - 1));
+  wait_on_address(&ptr->written, 1);
+  ptr->value = value;
+  atomic_store(&ptr->written, 1);
+}
+bool ring_buffer_read(RingBuffer *rb, u64 *value_ptr) {
+  // NOTE: if there is only 1 reader, then wait-free population oblivious, else lock-free
+  i32 *read_index_ptr = &rb->default_read_index;
+  i32 read_index = atomic_load(read_index_ptr);
+  while (1) {
+    RingBufferValue *ptr = (RingBufferValue *)((rb->buffer + read_index) & (RING_BUFFER_SIZE - 1));
+    if (ptr->written == 0) return false;
+    if (atomic_compare_exchange(read_index_ptr, &read_index, read_index + i32(sizeof(RingBufferValue)))) {
+      *value_ptr = ptr->value;
+      atomic_store(&ptr->written, 0);
+      return true;
+    };
+  }
+}
+bool ring_buffer_read_duplicated(RingBuffer *rb, u64 *value_ptr, i32 *read_index_ptr) {
+  // NOTE: if each reader has its own `read_index_ptr`, then wait-free population oblivious, else lock-free
+  i32 read_index = atomic_load(read_index_ptr);
+  i32 write_index = rb->write_index;
+  assert2(write_index - read_index <= RING_BUFFER_SIZE, string("RingBuffer underrun"));
+  while (1) {
+    RingBufferValue *ptr = (RingBufferValue *)((rb->buffer + read_index) & (RING_BUFFER_SIZE - 1));
+    if (write_index - read_index <= 0 || ptr->written == 0) return false;
+    if (atomic_compare_exchange(read_index_ptr, &read_index, read_index + i32(sizeof(RingBufferValue)))) {
+      *value_ptr = ptr->value;
+      atomic_store(&ptr->written, 0);
+      return true;
+    };
+  }
+}
+
 // multi-threaded O(1) allocator
 STRUCT(XorFreeListNode) {
   uptr next;
 };
 STRUCT_ALIGNED(Allocator, 16) {
-  // TODO: byte *buffer_start // (also the reclaim_queue)
+  // also the reclaim_queue
+  byte *buffer_start;
   byte *buffer_next;
   byte *buffer_end;
   XorFreeListNode *free_lists[16];
 };
+enum PrevBlockSpecial : uptr {
+  PREV_BLOCK_UNSET = 0,
+  PREV_BLOCK_NONE = 1,
+};
 STRUCT(AllocatorBlockHeader) {
-  AllocatorBlockHeader *prev_block;
-  /* u63 next_block, u1 is_used */
+  // `PREV_BLOCK_UNSET | PREV_BLOCK_NONE | AllocatorBlockHeader*`
+  uptr prev_block;
+  // `u63 next_block, u1 is_mergable`
   uptr next_block;
 };
 ASSERT(sizeof(AllocatorBlockHeader) % __BIGGEST_ALIGNMENT__ == 0);
@@ -128,42 +197,61 @@ STRUCT(AllocatorFreeBlock) {
 };
 ASSERT(sizeof(AllocatorBlockHeader) + sizeof(AllocatorFreeBlock) == 24);
 
+// TODO: per-thread free lists
 Allocator global_allocator = {};
+#define allocator_ring_buffer() ((RingBuffer *)(global_allocator.buffer_start + ring_buffer_size()))
 void _init_allocator(usize buffer_size) {
+  usize min_buffer_size = ring_buffer_size() + sizeof(RingBuffer);
+  assert(buffer_size >= min_buffer_size);
   Bytes buffer = page_reserve(buffer_size);
-  global_allocator.buffer_next = buffer.ptr;
+  global_allocator.buffer_start = buffer.ptr;
+  global_allocator.buffer_next = buffer.ptr + min_buffer_size;
   global_allocator.buffer_end = buffer.ptr + buffer_size;
+
+  RingBuffer *rb = allocator_ring_buffer();
+  rb->buffer = iptr(buffer.ptr);
+  AllocatorBlockHeader *first_block = (AllocatorBlockHeader *)(global_allocator.buffer_next);
+  first_block->prev_block = PREV_BLOCK_NONE;
 }
+// TODO: merge - if is_used atomic_compare_exchange(next_block, merged)
 rawptr alloc_size(usize size, usize align_mask) {
   // TODO: get next valid block
-  size = sizeof(AllocatorBlockHeader) + max(size + align_mask, sizeof(AllocatorFreeBlock));
+  size = sizeof(AllocatorBlockHeader) + max(align_mask + size, sizeof(AllocatorFreeBlock));
   AllocatorBlockHeader *block = nil;
   // make new block if necessary
   if (block == nil) {
     block = (AllocatorBlockHeader *)atomic_fetch_add(&global_allocator.buffer_next, iptr(size));
+    AllocatorBlockHeader *next_block = (AllocatorBlockHeader *)(uptr(block) + uptr(size));
+    block->next_block = (uptr(next_block) << 1) | 1;
+    atomic_store(&next_block->prev_block, uptr(block));
     assert(uptr(block) + size < uptr(global_allocator.buffer_end));
+  } else {
+    // TODO: split block if possible
   }
-  // TODO: split block if possible
   // write block metadata
   block->next_block |= 1;
   uptr ptr = uptr(block + 1);
   if (align_mask != 0) {
     ptr = align_up(ptr, align_mask);
-    usize offset = align_up_offset(ptr, align_mask);
-    *(u8 *)(ptr - 1) = u8(offset);
+    usize align_offset = align_up_offset(ptr, align_mask);
+    *(u8 *)(ptr - 1) = u8(align_offset);
   }
   return rawptr(ptr);
 }
 #define alloc_type(T)         ((T *)alloc_size(sizeof(T), alignof(T) - 1))
 #define alloc_array(T, count) ((T *)alloc_size(sizeof(T) * count, alignof(T) - 1))
 
+#define free_type(ptr, T)  free_size(sizeof(T), alignof(T) - 1)
+#define free_array(ptr, T) free_size(ptr, alignof(T) - 1)
 void free_size(void *ptr, usize align_mask) {
-  //..push to global_threads->reclaim_queue
+  RingBuffer *rb = allocator_ring_buffer();
+  uptr block = uptr(ptr);
+  if (align_mask != 0) {
+    u8 align_offset = *(u8 *)(ptr - 1);
+    block -= align_offset;
+  }
+  ring_buffer_write(rb, u64(block));
 }
 void reclaim_memory() {
   //..reclaim memory
 }
-
-/* IWYU pragma: begin_exports */
-#include "mem_threads.h"
-/* IWYU pragma: end_exports */

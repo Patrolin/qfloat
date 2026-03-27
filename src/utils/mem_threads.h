@@ -1,67 +1,7 @@
 #pragma once
 #include "builtin.h"
 
-// ring buffer
-#define RING_BUFFER_SIZE 4096
-ASSERT_POWER_OF_TWO(RING_BUFFER_SIZE);
-
-STRUCT(RingBuffer) {
-  isize buffer;
-  i32 write_index;
-  i32 default_read_index;
-};
-STRUCT(RingBufferValue) {
-  u32 written;
-  u64 value;
-};
-void ring_buffer_write(RingBuffer *rb, u64 value) {
-  // NOTE: wait-free population oblivious, but crash on overrun, zeroed by reader
-  i32 write_index = atomic_fetch_add(&rb->write_index, sizeof(RingBufferValue));
-  RingBufferValue *ptr = (RingBufferValue *)((rb->buffer + write_index) & (RING_BUFFER_SIZE - 1));
-  assert2(ptr->written == 0, string("RingBuffer overrun"));
-  ptr->value = value;
-  atomic_store(&ptr->written, 1);
-}
-forward_declare void wait_on_address(u32 *address, u32 while_value);
-void ring_buffer_write_or_wait(RingBuffer *rb, u64 value) {
-  // NOTE: wait-free population oblivious, but wait on overrun, zeroed by reader
-  i32 write_index = atomic_fetch_add(&rb->write_index, sizeof(RingBufferValue));
-  RingBufferValue *ptr = (RingBufferValue *)((rb->buffer + write_index) & (RING_BUFFER_SIZE - 1));
-  wait_on_address(&ptr->written, 1);
-  ptr->value = value;
-  atomic_store(&ptr->written, 1);
-}
-bool ring_buffer_read(RingBuffer *rb, u64 *value_ptr) {
-  // NOTE: if there is only 1 reader, then wait-free population oblivious, else lock-free
-  i32 *read_index_ptr = &rb->default_read_index;
-  i32 read_index = atomic_load(read_index_ptr);
-  while (1) {
-    RingBufferValue *ptr = (RingBufferValue *)((rb->buffer + read_index) & (RING_BUFFER_SIZE - 1));
-    if (ptr->written == 0) return false;
-    if (atomic_compare_exchange(read_index_ptr, &read_index, read_index + i32(sizeof(RingBufferValue)))) {
-      *value_ptr = ptr->value;
-      atomic_store(&ptr->written, 0);
-      return true;
-    };
-  }
-}
-bool ring_buffer_read_duplicated(RingBuffer *rb, u64 *value_ptr, i32 *read_index_ptr) {
-  // NOTE: if each reader has its own `read_index_ptr`, then wait-free population oblivious, else lock-free
-  i32 read_index = atomic_load(read_index_ptr);
-  i32 write_index = rb->write_index;
-  assert2(write_index - read_index <= RING_BUFFER_SIZE, string("RingBuffer underrun"));
-  while (1) {
-    RingBufferValue *ptr = (RingBufferValue *)((rb->buffer + read_index) & (RING_BUFFER_SIZE - 1));
-    if (write_index - read_index <= 0 || ptr->written == 0) return false;
-    if (atomic_compare_exchange(read_index_ptr, &read_index, read_index + i32(sizeof(RingBufferValue)))) {
-      *value_ptr = ptr->value;
-      atomic_store(&ptr->written, 0);
-      return true;
-    };
-  }
-}
-
-// TODO: wait-free population oblivious general-purpose allocator instead of arena
+// TODO: delete this
 /* NOTE: free_list_size(n): n < MEM_MANTISSA_MAX ? n : 2**(floor(n/MEM_MANTISSA_MAX) + MEM_IMPLICIT_MANTISSA_BITS-1) * (1 + (n%MEM_MANTISSA_MAX)/MEM_MANTISSA_MAX) */
 #define MEM_IMPLICIT_MANTISSA_BITS 3
 
