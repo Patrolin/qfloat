@@ -243,12 +243,12 @@ rawptr alloc_size(usize size, usize align_mask) {
 
 #define free_ptr(ptr) free_size(ptr, alignof(*ptr) - 1)
 void free_size(void *ptr, usize align_mask) {
-  RingBuffer *rb = allocator_ring_buffer();
   uptr block = uptr(ptr);
   if (align_mask != 0) {
     u8 align_offset = *(u8 *)(ptr - 1);
     block -= align_offset;
   }
+  RingBuffer *rb = allocator_ring_buffer();
   ring_buffer_write(rb, u64(block));
 }
 void reclaim_memory() {
