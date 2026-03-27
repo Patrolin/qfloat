@@ -229,7 +229,7 @@ rawptr alloc_size(usize size, usize align_mask) {
     // TODO: split block if possible
   }
   // write block metadata
-  block->next_block |= 1;
+  // TODO: probably check for double free
   uptr ptr = uptr(block + 1);
   if (align_mask != 0) {
     ptr = align_up(ptr, align_mask);
