@@ -241,8 +241,7 @@ rawptr alloc_size(usize size, usize align_mask) {
 #define alloc_type(T)         ((T *)alloc_size(sizeof(T), alignof(T) - 1))
 #define alloc_array(T, count) ((T *)alloc_size(sizeof(T) * count, alignof(T) - 1))
 
-#define free_type(ptr, T)  free_size(sizeof(T), alignof(T) - 1)
-#define free_array(ptr, T) free_size(ptr, alignof(T) - 1)
+#define free_ptr(ptr) free_size(ptr, alignof(*ptr) - 1)
 void free_size(void *ptr, usize align_mask) {
   RingBuffer *rb = allocator_ring_buffer();
   uptr block = uptr(ptr);
