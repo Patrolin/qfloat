@@ -3,9 +3,9 @@
 #include "os.h"
 
 /* NOTE:
-    BLOCKING - threads can block every other thread
-  STARVATION - a thread can be blocked indefinitely
-    LIVELOCK - threads can block each other indefinitely
+    BLOCKING - one thread can block many other threads (impacts throughput)
+  STARVATION - one thread can be blocked indefinitely (impacts latency)
+    LIVELOCK - threads can block each other indefinitely (impacts correctness)
 
   | NAME                           | BLOCKING | STARVATION | LIVELOCK | O(threads) | EXAMPLE                      |
   | blocking                       | yes      | yes        | no       | no         | wait_for_mutex(&lock)        |
