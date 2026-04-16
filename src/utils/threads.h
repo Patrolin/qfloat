@@ -3,15 +3,17 @@
 #include "os.h"
 
 /* NOTE:
-    BLOCKING - a thread can block every other thread from making progress
-  STARVATION - a thread can be blocked from making progress indefinitely
+    BLOCKING - threads can block every other thread
+  STARVATION - a thread can be blocked indefinitely
+    LIVELOCK - threads can block each other indefinitely
 
-  | NAME                           | BLOCKING | STARVATION | O(threads) | EXAMPLE                      |
-  | blocking                       | yes      | yes        | no         | wait_for_mutex(&lock)        |
-  | starvation-free                | yes      | no         | no         | wait_for_ticket_mutex(&lock) |
-  | lock-free / obstruction-free   | no       | yes        | no         | CAS loops / optimistic reads |
-  | wait-free                      | no       | no         | yes        | helping                      |
-  | wait-free population oblivious | no       | no         | no         | atomics + UB                 |
+  | NAME                           | BLOCKING | STARVATION | LIVELOCK | O(threads) | EXAMPLE                      |
+  | blocking                       | yes      | yes        | no       | no         | wait_for_mutex(&lock)        |
+  | starvation-free                | yes      | no         | no       | no         | wait_for_ticket_mutex(&lock) |
+  | obstruction-free               | no       | yes        | yes      | no         | optimistic reads             |
+  | lock-free                      | no       | yes        | no       | no         | CAS loops                    |
+  | wait-free                      | no       | no         | no       | yes        | helping                      |
+  | wait-free population oblivious | no       | no         | no       | no         | atomics + UB                 |
 */
 
 // syscalls
