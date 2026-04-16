@@ -35,28 +35,7 @@ CUINT thread_entry(rawptr param) {
   return 0;
 }
 void _init_threads() {
-  // get `logical_core_count`
-  u32 logical_core_count;
-  #if RUN_SINGLE_THREADED
-  logical_core_count = 1;
-  #else
-    #if OS_WINDOWS
-  SYSTEM_INFO info;
-  GetSystemInfo(&info);
-  logical_core_count = info.dwNumberOfProcessors; /* NOTE: this fails above 64 cores... */
-    #elif OS_LINUX
-  u8 cpu_masks[64];
-  isize written_masks_size = sched_getaffinity(0, sizeof(cpu_masks), (u8 *)&cpu_masks);
-  assert(written_masks_size >= 0);
-  for (isize i = 0; i < written_masks_size; i++) {
-    logical_core_count += count_ones(u8, cpu_masks[i]);
-  }
-    #else
-  assert(false);
-    #endif
-  #endif
-  assert(logical_core_count > 0);
-  // start threads
+  u32 logical_core_count = _get_logical_core_count();
   ThreadInfo *thread_infos = alloc_array(ThreadInfo, logical_core_count);
   u64 *values = alloc_array(u64, logical_core_count);
   global_threads.logical_core_count = logical_core_count;
@@ -101,7 +80,7 @@ noreturn_ _init_process() {
 #endif
   _init_console();
   _init_page_fault_handler();
-  _init_allocator(8*MebiByte);
+  _init_allocator(8 * MebiByte);
 #if SINGLE_CORE
   main_singlecore();
 #else

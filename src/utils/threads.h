@@ -144,6 +144,30 @@ STRUCT(Threads) {
 };
 global Threads global_threads;
 
+u32 _get_logical_core_count() {
+#if RUN_SINGLE_THREADED
+  return 1;
+#else
+  u32 logical_core_count;
+  #if OS_WINDOWS
+  SYSTEM_INFO info;
+  GetSystemInfo(&info);
+  logical_core_count = info.dwNumberOfProcessors; /* NOTE: this fails above 64 cores... */
+  #elif OS_LINUX
+  u8 cpu_masks[64];
+  isize written_masks_size = sched_getaffinity(0, sizeof(cpu_masks), (u8 *)&cpu_masks);
+  assert(written_masks_size >= 0);
+  for (isize i = 0; i < written_masks_size; i++) {
+    logical_core_count += count_ones(u8, cpu_masks[i]);
+  }
+  #else
+  assert(false);
+  #endif
+#endif
+  assert(logical_core_count > 0);
+  return logical_core_count;
+}
+
 // multi-core
 void wait_on_address(u32 *address, u32 while_value) {
   /* NOTE: On Windows, WaitOnAddress() "is allowed to return for other reasons", same thing with futex() on Linux */
