@@ -3,33 +3,16 @@
 #include "os.h"
 
 /* NOTE:
-                          blocking - a suspended thread can starve all other threads indefinitely        (`wait_for_mutex(&lock)`)
-                                   - throughput and latency degrade with number of threads
-                   starvation-free - a suspended thread can only starve other threads for a finite time  (`wait_for_ticket_mutex(&lock)`)
-                                   - throughput degrades with number of threads
-                      non-blocking - a suspended thread does not impact other threads
-                  obstruction-free - a thread can only make progress if no other threads are interfering (optimistic reads)
-                                   - can livelock
-                         lock-free - one thread can make progress, but others may starve                 (CAS loops)
-                                   - latency degrades with number of threads
-                         wait-free - all threads can make progress, but O(thread_count)                  (helping)
-                                   - latency degrades with number of threads
-    wait-free population oblivious - all threads can make progress, O(1)                                 (atomics + UB)
-                                   - throughput and latency don't degrade with number of threads
-  TODO: wait-free alloc(allocator, size, align) {
-    AllocOperation my_operation = alloc_operation(size, align);
-    allocator->operations[t] = my_operation;
-    Thread in_flight = -1;
-    while(1) {
-      atomic_compare_exchange(&allocator->in_flight, &in_flight, t);
-      if (in_flight == -1) {in_flight = t}
-      // ..help the inflight operation
-      if (in_flight == t) {
-        atomic_compare_exchange(&allocator->in_flight, &in_flight, -1);
-        return;
-      }
-    }
-  }
+    BLOCKING - a thread can block every other thread from making progress
+  STARVATION - a thread can be blocked from making progress indefinitely
+
+  | NAME                           | BLOCKING | STARVATION | O(threads) | EXAMPLE                      |
+  | blocking                       | yes      | yes        | no         | wait_for_mutex(&lock)        |
+  | starvation-free                | yes      | no         | no         | wait_for_ticket_mutex(&lock) |
+  | lock-free                      | no       | yes        | no         | CAS loops                    |
+  | obstruction-free               | no       | yes        | no         | optimistic reads             |
+  | wait-free                      | no       | no         | yes        | helping                      |
+  | wait-free population oblivious | no       | no         | no         | atomics + UB                 |
 */
 
 // syscalls
