@@ -303,3 +303,49 @@ void barrier_join_threads(Thread t, Thread threads_start, Thread threads_end) {
     wake_all_on_address(&shared_data->join_barrier);
   }
 }
+
+// thread entry
+forward_declare void thread_main(Thread t);
+CUINT thread_entry(rawptr param) {
+  Thread t = Thread(uptr(param));
+  thread_main(t);
+  barrier_join_threads(t, 0, global_threads.logical_core_count);
+  return 0;
+}
+void _start_threads(u32 thread_count) {
+  ThreadInfo thread_infos[thread_count];
+  u64 values[thread_count];
+  global_threads.logical_core_count = thread_count;
+  global_threads.thread_infos = thread_infos;
+  global_threads.values = values;
+  for (Thread t = 0; t < thread_count; t++) {
+    global_threads.thread_infos[t].threads_end = thread_count;
+    if (expect_near(t > 0)) {
+#if OS_WINDOWS
+      assert(CreateThread(0, 0, rawptr(thread_entry), (rawptr)uptr(t), STACK_SIZE_PARAM_IS_A_RESERVATION, 0) != 0);
+#elif OS_LINUX
+      rlimit stack_size_limit;
+      assert(getrlimit(RLIMIT_STACK, &stack_size_limit) >= 0);
+      u64 stack_size = stack_size_limit.rlim_cur;
+      uptr stack = mmap(0, stack_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_GROWSDOWN | MAP_STACK, -1, 0);
+      assert(stack != -1);
+  #if ARCH_STACK_DIRECTION == -1
+      stack = stack + stack_size - sizeof(new_thread_data);
+      new_thread_data *stack_data = (new_thread_data *)(stack);
+  #else
+      new_thread_data *stack_data = (new_thread_data *)(stack);
+      stack = stack + sizeof(new_thread_data);
+  #endif
+      stack_data->entry = thread_wrapper;
+      stack_data->param = (rawptr)uptr(t);
+      ThreadFlags flags = CLONE_VM | CLONE_FS | CLONE_FILES | CLONE_SIGHAND | CLONE_THREAD | CLONE_SYSVSEM;
+      /* NOTE: SIGCHLD is the only one that doesn't print garbage depending on which thread exits... */
+      isize error = newthread(flags | (ThreadFlags)SIGCHLD, stack_data);
+      assert(error >= 0);
+#else
+      assert(false);
+#endif
+    }
+  }
+  thread_entry(0);
+}

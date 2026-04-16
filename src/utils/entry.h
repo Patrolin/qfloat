@@ -1,80 +1,12 @@
 #pragma once
 #include "builtin.h"
-#include "os.h"
+#include "fmt.h"
 #include "mem.h"
 #include "process.h"
 #include "threads.h"
 
 // entry
-#if OS_WINDOWS
-typedef enum : DWORD {
-  CP_UTF8 = 65001,
-} CodePage;
-
-foreign BOOL WINAPI SetConsoleOutputCP(CodePage code_page);
-#elif OS_LINUX
-#else
-ASSERT(false);
-#endif
-
-void _init_console() {
-#if OS_WINDOWS
-  SetConsoleOutputCP(CP_UTF8);
-#else
-  // ASSERT(false);
-#endif
-}
-#if SINGLE_CORE
-forward_declare void main_singlecore();
-#else
-forward_declare void main_multicore(Thread t);
-CUINT thread_entry(rawptr param) {
-  Thread t = Thread(uptr(param));
-  main_multicore(t);
-  barrier_join_threads(t, 0, global_threads.logical_core_count);
-  return 0;
-}
-void _init_threads() {
-  u32 logical_core_count = _get_logical_core_count();
-  ThreadInfo *thread_infos = alloc_array(ThreadInfo, logical_core_count);
-  u64 *values = alloc_array(u64, logical_core_count);
-  global_threads.logical_core_count = logical_core_count;
-  global_threads.thread_infos = thread_infos;
-  global_threads.values = values;
-  for (Thread t = 0; t < logical_core_count; t++) {
-    global_threads.thread_infos[t].threads_end = logical_core_count;
-    if (expect_near(t > 0)) {
-  #if OS_WINDOWS
-      assert(CreateThread(0, 0, thread_entry, (rawptr)uptr(t), STACK_SIZE_PARAM_IS_A_RESERVATION, 0) != 0);
-  #elif OS_LINUX
-      rlimit stack_size_limit;
-      assert(getrlimit(RLIMIT_STACK, &stack_size_limit) >= 0);
-      u64 stack_size = stack_size_limit.rlim_cur;
-      uptr stack = mmap(0, stack_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_GROWSDOWN | MAP_STACK, -1, 0);
-      assert(stack != -1);
-    #if ARCH_STACK_DIRECTION == -1
-      stack = stack + stack_size - sizeof(new_thread_data);
-      new_thread_data *stack_data = (new_thread_data *)(stack);
-    #else
-      new_thread_data *stack_data = (new_thread_data *)(stack);
-      stack = stack + sizeof(new_thread_data);
-    #endif
-      stack_data->entry = thread_entry;
-      stack_data->param = (rawptr)uptr(t);
-      ThreadFlags flags = CLONE_VM | CLONE_FS | CLONE_FILES | CLONE_SIGHAND | CLONE_THREAD | CLONE_SYSVSEM;
-      /* NOTE: SIGCHLD is the only one that doesn't print garbage depending on which thread exits... */
-      isize error = newthread(flags | (ThreadFlags)SIGCHLD, stack_data);
-      assert(error >= 0);
-  #else
-      assert(false);
-  #endif
-    }
-  }
-  thread_entry(0);
-}
-#endif
-
-noreturn_ _init_process() {
+noreturn_ _init() {
 #if NOLIBC && OS_WINDOWS
   asm volatile("" ::"X"(_fltused));
 #endif
@@ -82,12 +14,13 @@ noreturn_ _init_process() {
   _init_page_fault_handler();
   _init_allocator(8 * MebiByte);
 #if SINGLE_CORE
-  main_singlecore();
+  thread_main(0);
 #else
-  _init_threads();
+  _start_threads(_get_logical_core_count());
 #endif
   exit_process(0);
 }
+
 #if NOLIBC
   /* NOTE: windows starts aligned to 8B, while linux starts (correctly) aligned to 16B
     thus we have to realign the stack pointer either way... */
@@ -101,6 +34,6 @@ naked noreturn_ _start() {
 }
 #else
 CINT main() {
-  _init_process();
+  _init();
 }
 #endif

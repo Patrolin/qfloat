@@ -2,6 +2,30 @@
 #include "builtin.h"
 #include "os.h"
 
+// syscalls
+#if OS_WINDOWS
+typedef enum : DWORD {
+  CP_UTF8 = 65001,
+} CodePage;
+
+foreign BOOL WINAPI SetConsoleOutputCP(CodePage code_page);
+#elif OS_LINUX
+#else
+ASSERT(false);
+#endif
+
+// init
+void _init_console() {
+#if OS_WINDOWS
+  SetConsoleOutputCP(CP_UTF8);
+#else
+  // ASSERT(false);
+#endif
+}
+#if SINGLE_CORE
+forward_declare void main_singlecore();
+#endif
+
 // fprint()
 #define DELETE_LINE "\x1b[2K\r"
 #define NEWLINE     "\n"
