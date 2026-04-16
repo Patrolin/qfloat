@@ -9,8 +9,7 @@
   | NAME                           | BLOCKING | STARVATION | O(threads) | EXAMPLE                      |
   | blocking                       | yes      | yes        | no         | wait_for_mutex(&lock)        |
   | starvation-free                | yes      | no         | no         | wait_for_ticket_mutex(&lock) |
-  | lock-free                      | no       | yes        | no         | CAS loops                    |
-  | obstruction-free               | no       | yes        | no         | optimistic reads             |
+  | lock-free / obstruction-free   | no       | yes        | no         | CAS loops / optimistic reads |
   | wait-free                      | no       | no         | yes        | helping                      |
   | wait-free population oblivious | no       | no         | no         | atomics + UB                 |
 */
