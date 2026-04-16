@@ -313,7 +313,7 @@ CUINT thread_entry(rawptr param) {
   return 0;
 }
 void _start_threads(u32 thread_count) {
-  ThreadInfo thread_infos[thread_count];
+  ThreadInfo thread_infos[thread_count] = {};
   u64 values[thread_count];
   global_threads.logical_core_count = thread_count;
   global_threads.thread_infos = thread_infos;
